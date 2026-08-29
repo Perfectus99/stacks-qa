@@ -4,17 +4,23 @@
   "version": "0.1.0",
   "description": "API and browser test automation for a multi-tenant payments platform",
   "workspaces": [
+    "apps/*",
     "packages/*",
     "suites/*"
   ],
   "scripts": {
     "test:api": "npm run test --workspace suites/regression",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/demo-api/tsconfig.json",
+    "dev": "npm run dev --workspace apps/demo-api",
+    "build": "npm run build --workspace apps/demo-api",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.7.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "eslint": "^9.13.0",
+    "typescript-eslint": "^8.11.0"
   },
   "engines": {
     "node": ">=20"

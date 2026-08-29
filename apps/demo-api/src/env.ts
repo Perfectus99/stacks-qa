@@ -9,4 +9,8 @@ export const env = {
   host: required('HOST', '0.0.0.0'),
   databaseUrl: required('DATABASE_URL', 'postgres://stacks:stacks@localhost:5432/stacks'),
   jwtSecret: required('JWT_SECRET', 'development-only-secret'),
+  admin: {
+    username: required('ADMIN_USERNAME', 'admin'),
+    password: required('ADMIN_PASSWORD', 'admin-password'),
+  },
 } as const

@@ -16,5 +16,6 @@ ENV NODE_ENV=production
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/apps/demo-api/dist ./dist
 COPY --from=build /repo/apps/demo-api/package.json ./package.json
+COPY --from=build /repo/apps/demo-api/migrations ./migrations
 EXPOSE 3000
 CMD ["node", "dist/index.js"]

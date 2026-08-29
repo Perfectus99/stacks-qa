@@ -17,7 +17,7 @@ function required(name: string, fallback?: string): string {
 export const env = {
   /** Base URL of the system under test. */
   get baseUrl(): string {
-    return required('BASE_URL', 'http://localhost:3000').replace(/\/$/, '')
+    return required('BASE_URL', 'http://localhost:3100').replace(/\/$/, '')
   },
 
   /** Credentials for the seeded administrator. */

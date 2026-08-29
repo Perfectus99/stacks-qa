@@ -36,3 +36,33 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down -v
+
+  suite:
+    name: api suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start the system under test
+        run: docker compose up -d --wait
+      # @pending marks a test whose service has not been built yet. It stays in
+      # the repository so the specification is visible, and out of the gate so a
+      # red badge always means a real regression.
+      - name: Run the suite
+        run: npm run test:api -- --grep-invert @pending
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: suites/regression/playwright-report
+          retention-days: 14
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop
+        if: always()
+        run: docker compose down -v

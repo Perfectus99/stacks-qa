@@ -11,7 +11,7 @@ import { test, expect } from '../../fixtures/index.js'
  * the client's business; that the balance moved by exactly the deposited amount
  * is this test's.
  */
-test('a manual deposit is credited once an administrator approves it @p0 @payment @wallet @journey', async ({
+test('a manual deposit is credited once an administrator approves it @p0 @payment @wallet @journey @pending', async ({
   player,
   admin,
 }) => {
@@ -48,7 +48,7 @@ test('a manual deposit is credited once an administrator approves it @p0 @paymen
   )
 })
 
-test('the ledger reconciles after a deposit is approved @p0 @wallet @journey', async ({
+test('the ledger reconciles after a deposit is approved @p0 @wallet @journey @pending', async ({
   player,
   admin,
 }) => {
@@ -65,7 +65,7 @@ test('the ledger reconciles after a deposit is approved @p0 @wallet @journey', a
   expect(reconciliation.ledgerTotal).toBe(reconciliation.balance)
 })
 
-test('a deposit belonging to another tenant cannot be approved @negative @security @payment', async ({
+test('a deposit belonging to another tenant cannot be approved @negative @security @payment @pending', async ({
   player,
 }) => {
   const method = await player.client.payment.methods('BANK_TRANSFER')

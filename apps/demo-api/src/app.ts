@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import { registerErrorHandler } from './errors.js'
-import { authPlugin } from './plugins/auth.js'
+import { registerAuth } from './plugins/auth.js'
 import { userRoutes } from './modules/user/routes.js'
 import { walletRoutes } from './modules/wallet/routes.js'
 import { paymentRoutes } from './modules/payment/routes.js'
@@ -18,7 +18,7 @@ export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? 'info' } })
 
   registerErrorHandler(app)
-  void app.register(authPlugin)
+  registerAuth(app)
 
   app.get('/health', async (_request, reply) => {
     const database = await ping()

@@ -28,8 +28,15 @@ export function issueToken(principal: Principal): string {
  * Deliberately does not reject on its own — a route decides whether it needs a
  * session. Rejecting here would make every public route opt out, which is the
  * wrong default to get wrong.
+ *
+ * Registered directly on the root instance, NOT via `app.register`. Fastify
+ * encapsulates plugins, so a hook added inside one applies to that plugin and
+ * its children — never to sibling route modules. Wrapped as a plugin this hook
+ * silently did nothing, and the endpoints still rejected anonymous callers
+ * because `principal` was undefined for everyone. The negative test passed; the
+ * first positive test failed.
  */
-export async function authPlugin(app: FastifyInstance): Promise<void> {
+export function registerAuth(app: FastifyInstance): void {
   app.addHook('onRequest', async (request: FastifyRequest) => {
     const header = request.headers.authorization
     if (!header?.startsWith('Bearer ')) return

@@ -1,0 +1,22 @@
+{
+  "name": "stacks-qa",
+  "private": true,
+  "version": "0.1.0",
+  "description": "API and browser test automation for a multi-tenant payments platform",
+  "workspaces": [
+    "packages/*",
+    "suites/*"
+  ],
+  "scripts": {
+    "test:api": "npm run test --workspace suites/regression",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.7.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

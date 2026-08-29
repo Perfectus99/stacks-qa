@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log

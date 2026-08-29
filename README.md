@@ -4,9 +4,9 @@ API test automation for a multi-tenant payments platform — wallet, payments,
 promotions and users — with the system under test included, so the whole thing
 runs from a clean clone.
 
-> **Status: identity works.** Registration, sessions and profile are built and
-> tested. Wallet and payments still answer `501`. 5 of 9 tests pass; the other
-> four are tagged `@pending`. See [Build order](#build-order).
+> **Status: identity and wallet work.** Registration, sessions, balances and the
+> ledger are built and tested. Payments still answer `501`. 15 of 18 tests pass;
+> the other three are tagged `@pending`. See [Build order](#build-order).
 
 ## Why the tests come first
 
@@ -41,7 +41,7 @@ npm install
 npm run test:api
 ```
 
-Five tests pass. The remaining four are tagged **`@pending`** — their service
+Fifteen tests pass. The remaining three are tagged **`@pending`** — their service
 has not been built yet, so they fail with `501 NOT_IMPLEMENTED`. They stay in
 the repository because they are the specification for what comes next, and out
 of the CI gate so a red build always means a real regression:
@@ -80,6 +80,16 @@ service and the URL prefixes preserve that, while the whole system still starts
 with a single command. Modules never import each other's internals, so the
 boundary is real even though the deployment is not.
 
+**The ledger is the record; the balance is a convenience.** The balance is
+maintained by a database trigger on ledger inserts, so any path that writes an
+entry moves the balance by exactly that amount — including paths written later
+by someone who has not read this file. That is what makes
+`GET /wallet/reconciliation` worth asserting: it compares two values that cannot
+drift through the intended route, so a mismatch is evidence of an unintended one.
+
+**Money is stored in minor units as an integer.** Floats invite the rounding
+class of bug that is hardest to notice and worst to explain.
+
 **Every authorisation rule gets a pair.** Someone who may, and someone who may
 not. A test that only proves an endpoint refuses cannot tell "correctly refuses"
 from "refuses everyone" — see [`docs/lessons.md`](docs/lessons.md) for the time
@@ -97,8 +107,8 @@ whichever order is unlucky.
 | 1 | Workspace, typed client, the first three chains as failing tests | ✅ done |
 | 2 | `demo-api` skeleton, docker compose, CI | ✅ done |
 | 3 | `user` service — registration and login turn green | ✅ done |
-| 4 | `wallet` service — balances, ledger, reconciliation | next |
-| 5 | `payment` service — the deposit approval journey turns green | |
+| 4 | `wallet` service — balances, ledger, reconciliation | ✅ done |
+| 5 | `payment` service — the deposit approval journey turns green | next |
 | 6 | `promotion` service — deposits with a bonus attached | |
 | 7 | Browser layer over a minimal UI | |
 | 8 | Load thresholds and an authorisation matrix | |

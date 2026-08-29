@@ -35,4 +35,11 @@ export class WalletService {
   reconciliation(): Promise<Reconciliation> {
     return this.api.get<Reconciliation>('/wallet/reconciliation')
   }
+
+  // ---- admin surface -------------------------------------------------------
+
+  /** Credit (positive) or debit (negative) an account. Administrators only. */
+  adjust(input: { userId: string; amount: number; reason: string }): Promise<Transaction> {
+    return this.api.post<Transaction>('/wallet/admin/adjustments', { body: { ...input } })
+  }
 }

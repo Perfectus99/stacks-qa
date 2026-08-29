@@ -19,7 +19,7 @@ test.describe('registration', () => {
     expect(session.userId).toBe(registered.userId)
   })
 
-  test('a new account starts with a zero balance @p0 @user @wallet @pending', async ({ player }) => {
+  test('a new account starts with a zero balance @p0 @user @wallet', async ({ player }) => {
     expect(await player.client.wallet.balance()).toBe(0)
   })
 

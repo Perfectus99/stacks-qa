@@ -4,9 +4,9 @@ API test automation for a multi-tenant payments platform — wallet, payments,
 promotions and users — with the system under test included, so the whole thing
 runs from a clean clone.
 
-> **Status: skeleton.** The system under test starts and answers; its routes
-> return `501` until the service behind them is built. 1 of 9 tests passes.
-> See [Build order](#build-order).
+> **Status: identity works.** Registration, sessions and profile are built and
+> tested. Wallet and payments still answer `501`. 5 of 9 tests pass; the other
+> four are tagged `@pending`. See [Build order](#build-order).
 
 ## Why the tests come first
 
@@ -41,13 +41,17 @@ npm install
 npm run test:api
 ```
 
-Eight of the nine tests fail with `501 NOT_IMPLEMENTED`, which is the point: the
-routes exist because a test asks for them, and the behaviour behind each one
-arrives in the session that turns its test green.
+Five tests pass. The remaining four are tagged **`@pending`** — their service
+has not been built yet, so they fail with `501 NOT_IMPLEMENTED`. They stay in
+the repository because they are the specification for what comes next, and out
+of the CI gate so a red build always means a real regression:
 
-The ninth passes. Authentication is real from the start, so the test asserting
-that the profile endpoint rejects an anonymous caller has nothing left to wait
-for.
+```bash
+npm run test:api -- --grep-invert @pending   # what CI runs
+npm run test:api                             # everything, including the spec
+```
+
+A tag comes off in the session that turns its test green.
 
 **Ports are deliberately uncommon** — `3100` for the API, `5442` for the
 database — so the stack never collides with whatever else is running locally.
@@ -76,6 +80,11 @@ service and the URL prefixes preserve that, while the whole system still starts
 with a single command. Modules never import each other's internals, so the
 boundary is real even though the deployment is not.
 
+**Every authorisation rule gets a pair.** Someone who may, and someone who may
+not. A test that only proves an endpoint refuses cannot tell "correctly refuses"
+from "refuses everyone" — see [`docs/lessons.md`](docs/lessons.md) for the time
+that mattered.
+
 **Actors are fixtures.** `admin` is worker-scoped, because admin state is
 read-mostly and one login per worker is enough. `player` is test-scoped and
 unique, because two tests sharing a wallet couple their balances and fail in
@@ -87,8 +96,8 @@ whichever order is unlucky.
 |---|---|---|
 | 1 | Workspace, typed client, the first three chains as failing tests | ✅ done |
 | 2 | `demo-api` skeleton, docker compose, CI | ✅ done |
-| 3 | `user` service — registration and login turn green | next |
-| 4 | `wallet` service — balances, ledger, reconciliation | |
+| 3 | `user` service — registration and login turn green | ✅ done |
+| 4 | `wallet` service — balances, ledger, reconciliation | next |
 | 5 | `payment` service — the deposit approval journey turns green | |
 | 6 | `promotion` service — deposits with a bonus attached | |
 | 7 | Browser layer over a minimal UI | |

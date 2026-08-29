@@ -4,6 +4,28 @@ Mistakes already paid for once. Newest first.
 
 ---
 
+## Unique-looking test data that was not unique across workers
+
+**What happened.** The player factory built usernames from a timestamp and a
+module-level counter. Playwright runs several worker *processes*, each with its
+own counter starting at one, so two workers entering the same millisecond
+produced the same username. Whichever registration lost got a `409`, and the
+fixture failed before the test body ran.
+
+The symptom was two unrelated tests failing in the full run and passing on every
+serial re-run — the shape of flake, which is the shape that gets a retry added
+instead of a fix.
+
+**Why it matters.** "Unique" has to mean unique across the concurrency the suite
+actually runs at. A counter is per-process; a timestamp has millisecond
+resolution; neither is a guarantee, and together they are still not one.
+
+**The rule.** Generated identifiers include a random component. Before calling a
+failure flake, check whether it reproduces serially — if it only fails in
+parallel, it is a real bug about shared state, not noise.
+
+---
+
 ## A negative test passed because the feature was broken for everyone
 
 **What happened.** The authentication hook was registered with

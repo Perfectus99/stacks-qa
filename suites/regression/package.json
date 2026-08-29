@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
+    "test:ci": "playwright test --grep-invert @pending",
     "test:smoke": "playwright test --grep @smoke",
     "report": "playwright show-report"
   }

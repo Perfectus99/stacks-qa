@@ -49,11 +49,12 @@ jobs:
       - run: npm ci
       - name: Start the system under test
         run: docker compose up -d --wait
-      # @pending marks a test whose service has not been built yet. It stays in
-      # the repository so the specification is visible, and out of the gate so a
-      # red badge always means a real regression.
+      # The gate lives in suites/regression/package.json, not here: npm eats
+      # flags forwarded through a nested workspace script, and `--grep-invert
+      # @pending` silently became `playwright test @pending` — the exact
+      # inverse of the intent, passing locally and running one test in CI.
       - name: Run the suite
-        run: npm run test:api -- --grep-invert @pending
+        run: npm run test:ci
       - uses: actions/upload-artifact@v4
         if: always()
         with:

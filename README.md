@@ -47,8 +47,8 @@ the repository because they are the specification for what comes next, and out
 of the CI gate so a red build always means a real regression:
 
 ```bash
-npm run test:api -- --grep-invert @pending   # what CI runs
-npm run test:api                             # everything, including the spec
+npm run test:ci     # what CI runs — everything except @pending
+npm run test:api    # everything, including the specification for what's next
 ```
 
 A tag comes off in the session that turns its test green.

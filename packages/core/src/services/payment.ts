@@ -42,8 +42,14 @@ export class PaymentService {
 
   // ---- admin surface -------------------------------------------------------
 
-  listDeposits(): Promise<DepositSummary> {
-    return this.api.get<DepositSummary>('/payment/admin/deposits')
+  /**
+   * Filtering by account is not a convenience. The summary counters are shared
+   * across everything in the tenant, so an unfiltered before/after comparison
+   * is only stable when nothing else is running — which is never true of a
+   * parallel suite.
+   */
+  listDeposits(filter: { userId?: string } = {}): Promise<DepositSummary> {
+    return this.api.get<DepositSummary>('/payment/admin/deposits', { query: filter })
   }
 
   viewDeposit(depositId: string): Promise<Deposit> {
@@ -53,6 +59,12 @@ export class PaymentService {
   approveDeposit(depositId: string): Promise<{ success: boolean }> {
     return this.api.patch(`/payment/admin/deposits/${depositId}`, {
       body: { status: 'APPROVED' },
+    })
+  }
+
+  rejectDeposit(depositId: string, reason = 'not verified'): Promise<{ success: boolean }> {
+    return this.api.patch(`/payment/admin/deposits/${depositId}`, {
+      body: { status: 'REJECTED', reason },
     })
   }
 }

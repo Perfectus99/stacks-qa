@@ -11,7 +11,7 @@ import { test, expect } from '../../fixtures/index.js'
  * the client's business; that the balance moved by exactly the deposited amount
  * is this test's.
  */
-test('a manual deposit is credited once an administrator approves it @p0 @payment @wallet @journey @pending', async ({
+test('a manual deposit is credited once an administrator approves it @p0 @payment @wallet @journey', async ({
   player,
   admin,
 }) => {
@@ -27,7 +27,10 @@ test('a manual deposit is credited once an administrator approves it @p0 @paymen
   expect(deposit.flowType).toBe('BANK_TRANSFER')
 
   // --- admin half ---------------------------------------------------------
-  const before = await admin.payment.listDeposits()
+  // Scoped to this player: the tenant-wide counters move whenever any other
+  // test approves something, so an unfiltered before/after only holds when
+  // nothing else is running.
+  const before = await admin.payment.listDeposits({ userId: player.userId })
 
   const detail = await admin.payment.viewDeposit(deposit.depositId)
   expect(detail.status).toBe('PENDING_APPROVAL')
@@ -35,7 +38,7 @@ test('a manual deposit is credited once an administrator approves it @p0 @paymen
 
   await admin.payment.approveDeposit(deposit.depositId)
 
-  const after = await admin.payment.listDeposits()
+  const after = await admin.payment.listDeposits({ userId: player.userId })
   expect(after.summary.completedCount).toBe(before.summary.completedCount + 1)
   expect(after.deposits.find((d) => d.depositId === deposit.depositId)?.status).toBe('APPROVED')
 
@@ -48,7 +51,7 @@ test('a manual deposit is credited once an administrator approves it @p0 @paymen
   )
 })
 
-test('the ledger reconciles after a deposit is approved @p0 @wallet @journey @pending', async ({
+test('the ledger reconciles after a deposit is approved @p0 @wallet @journey', async ({
   player,
   admin,
 }) => {
@@ -65,7 +68,7 @@ test('the ledger reconciles after a deposit is approved @p0 @wallet @journey @pe
   expect(reconciliation.ledgerTotal).toBe(reconciliation.balance)
 })
 
-test('a deposit belonging to another tenant cannot be approved @negative @security @payment @pending', async ({
+test('a deposit belonging to another tenant cannot be approved @negative @security @payment', async ({
   player,
 }) => {
   const method = await player.client.payment.methods('BANK_TRANSFER')

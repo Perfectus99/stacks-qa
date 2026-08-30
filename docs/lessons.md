@@ -4,6 +4,26 @@ Mistakes already paid for once. Newest first.
 
 ---
 
+## A field the client sent and the server quietly threw away
+
+**What happened.** Deposits gained an optional `promotionCode`. The client sent
+it, the service read it — but the route's Zod schema was never updated, and Zod
+strips unknown keys by default. The field was gone before the handler saw it.
+
+The request returned `201`. The deposit was created. Nothing errored. It simply
+had no bonus, and the deposit that should have been refused for citing an
+ineligible promotion was accepted instead.
+
+**Why it matters.** Silently discarding input is the worst available behaviour:
+the caller is told everything worked. There is no log line, no status code and
+no clue, and the bug looks like a business-logic error somewhere far away.
+
+**The rule.** Request bodies are `.strict()`. An unknown field is a `400`, not a
+shrug. If the caller is sending something the endpoint does not understand, one
+of the two is wrong and both should hear about it immediately.
+
+---
+
 ## A concurrency test with no concurrency in it
 
 **What happened.** The test guarding against two administrators approving one

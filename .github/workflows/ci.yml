@@ -7,7 +7,7 @@ on:
 
 jobs:
   static:
-    name: typecheck, lint, build
+    name: typecheck, lint, unit, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -18,6 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run test:unit
       - run: npm run build
 
   stack:

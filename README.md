@@ -4,10 +4,9 @@ API test automation for a multi-tenant payments platform — wallet, payments,
 promotions and users — with the system under test included, so the whole thing
 runs from a clean clone.
 
-> **Status: the deposit journey works end to end.** A player submits a manual
-> deposit, an administrator approves it, the funds land and the movement is
-> recorded. 28 tests, all passing, nothing pending.
-> See [Build order](#build-order).
+> **Status: both deposit journeys work end to end**, with and without a
+> promotion attached. 41 API tests and 9 unit tests, all passing, nothing
+> pending. See [Build order](#build-order).
 
 ## Why the tests come first
 
@@ -26,6 +25,7 @@ side-effect:
 
 ```
 apps/demo-api/          the system under test — one process, one module per service
+                        (pure rules carry their own unit tests, beside the code)
 packages/core/          the typed client — one definition of how to call the platform
 packages/test-data/     factories; uniqueness and cleanup live here, never in a spec
 suites/regression/      the API suite: folder = owning service, tags = why it exists
@@ -39,10 +39,11 @@ repository has not kept.
 ```bash
 docker compose up -d --wait     # the system under test, on :3100
 npm install
-npm run test:api
+npm run test:api                # 41 API tests
+npm run test:unit               # 9 unit tests — no database, no server
 ```
 
-All 28 pass. Nothing is pending.
+All pass. Nothing is pending.
 
 **`@pending`** marks a test whose service has not been built yet. Such tests stay
 in the repository because they are the specification for what comes next, and out
@@ -91,6 +92,16 @@ drift through the intended route, so a mismatch is evidence of an unintended one
 **Money is stored in minor units as an integer.** Floats invite the rounding
 class of bug that is hardest to notice and worst to explain.
 
+**Eligibility for a bonus is decided twice** — previewed when a deposit is
+submitted, decided again when it is approved — because a promotion can be
+withdrawn in between. One pure function does both, so the two moments cannot
+drift apart, and being pure it carries unit tests for the boundaries that are
+awkward to reach through the API.
+
+**Request bodies are `.strict()`.** An unknown field is a `400`, not a shrug.
+Zod strips unknown keys by default, which turned a promotion code the client
+was sending into a silent no-op.
+
 **Every authorisation rule gets a pair.** Someone who may, and someone who may
 not. A test that only proves an endpoint refuses cannot tell "correctly refuses"
 from "refuses everyone" — see [`docs/lessons.md`](docs/lessons.md) for the time
@@ -116,6 +127,7 @@ whichever order is unlucky.
 | 3 | `user` service — registration and login turn green | ✅ done |
 | 4 | `wallet` service — balances, ledger, reconciliation | ✅ done |
 | 5 | `payment` service — the deposit approval journey turns green | ✅ done |
-| 6 | `promotion` service — deposits with a bonus attached | next |
-| 7 | Browser layer over a minimal UI | |
-| 8 | Load thresholds and an authorisation matrix | |
+| 6 | `promotion` service — deposits with a bonus attached | ✅ done |
+| 7 | Holds — release requirement, progress, expiry | next |
+| 8 | Browser layer over a minimal UI | |
+| 9 | Load thresholds and an authorisation matrix | |

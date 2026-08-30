@@ -41,6 +41,7 @@ docker compose up -d --wait     # the system under test, on :3100
 npm install
 npm run test:api                # 41 API tests
 npm run test:unit               # 9 unit tests — no database, no server
+npm run verify                  # typecheck + lint + unit: the static gate CI runs
 ```
 
 All pass. Nothing is pending.

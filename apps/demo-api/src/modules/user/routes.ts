@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { ApiError } from '../../errors.js'
 import { parse } from '../../validation.js'
 import { requireSession } from '../../plugins/auth.js'
 import { login, profile, register } from './service.js'

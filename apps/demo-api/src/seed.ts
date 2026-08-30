@@ -19,6 +19,17 @@ export async function seed(): Promise<void> {
   `
   if (!tenant) throw new Error('Seeding the demo tenant returned no row')
 
+  for (const [flowType, displayName] of [
+    ['BANK_TRANSFER', 'Bank transfer'],
+    ['QR_TRANSFER', 'QR transfer'],
+  ] as const) {
+    await sql`
+      insert into gateway_configs (tenant_id, flow_type, display_name)
+      values (${tenant.tenant_id}, ${flowType}, ${displayName})
+      on conflict (tenant_id, flow_type) do update set display_name = excluded.display_name
+    `
+  }
+
   await sql`
     insert into users (tenant_id, username, password_hash, currency, role)
     values (${tenant.tenant_id}, ${env.admin.username},

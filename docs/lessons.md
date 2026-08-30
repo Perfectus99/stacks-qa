@@ -4,6 +4,28 @@ Mistakes already paid for once. Newest first.
 
 ---
 
+## A concurrency test with no concurrency in it
+
+**What happened.** The test guarding against two administrators approving one
+deposit simultaneously fired both requests from the shared `admin` fixture.
+Playwright serialises requests issued through a single `APIRequestContext`, so
+the second only began after the first had committed — and was correctly refused.
+
+The test passed. It also passed against a build with the row lock deliberately
+removed, where the deposit really was credited twice.
+
+**Why it matters.** A test named for a race that does not create one is worse
+than no test: it is a standing claim that the race is handled.
+
+**The rule.** A test written to catch a specific defect is not finished until it
+has been *seen to fail* in that defect's presence. Break the fix, watch it go
+red, put the fix back. For concurrency specifically: separate clients, or it is
+not concurrent.
+
+**Related:** [`bugs/001-double-credit-on-concurrent-approval.md`](bugs/001-double-credit-on-concurrent-approval.md).
+
+---
+
 ## Unique-looking test data that was not unique across workers
 
 **What happened.** The player factory built usernames from a timestamp and a

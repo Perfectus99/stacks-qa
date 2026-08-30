@@ -4,9 +4,10 @@ API test automation for a multi-tenant payments platform — wallet, payments,
 promotions and users — with the system under test included, so the whole thing
 runs from a clean clone.
 
-> **Status: identity and wallet work.** Registration, sessions, balances and the
-> ledger are built and tested. Payments still answer `501`. 15 of 18 tests pass;
-> the other three are tagged `@pending`. See [Build order](#build-order).
+> **Status: the deposit journey works end to end.** A player submits a manual
+> deposit, an administrator approves it, the funds land and the movement is
+> recorded. 28 tests, all passing, nothing pending.
+> See [Build order](#build-order).
 
 ## Why the tests come first
 
@@ -41,17 +42,17 @@ npm install
 npm run test:api
 ```
 
-Fifteen tests pass. The remaining three are tagged **`@pending`** — their service
-has not been built yet, so they fail with `501 NOT_IMPLEMENTED`. They stay in
-the repository because they are the specification for what comes next, and out
-of the CI gate so a red build always means a real regression:
+All 28 pass. Nothing is pending.
+
+**`@pending`** marks a test whose service has not been built yet. Such tests stay
+in the repository because they are the specification for what comes next, and out
+of the CI gate so a red build always means a real regression. The tag comes off
+in the session that turns the test green:
 
 ```bash
 npm run test:ci     # what CI runs — everything except @pending
 npm run test:api    # everything, including the specification for what's next
 ```
-
-A tag comes off in the session that turns its test green.
 
 **Ports are deliberately uncommon** — `3100` for the API, `5442` for the
 database — so the stack never collides with whatever else is running locally.
@@ -95,6 +96,12 @@ not. A test that only proves an endpoint refuses cannot tell "correctly refuses"
 from "refuses everyone" — see [`docs/lessons.md`](docs/lessons.md) for the time
 that mattered.
 
+**A test written to catch a defect is not finished until it has been seen to
+fail.** Break the fix, watch it go red, put the fix back. The concurrent-approval
+test passed against a build with the lock removed until it was checked that way —
+[`docs/bugs/001`](docs/bugs/001-double-credit-on-concurrent-approval.md) is the
+write-up.
+
 **Actors are fixtures.** `admin` is worker-scoped, because admin state is
 read-mostly and one login per worker is enough. `player` is test-scoped and
 unique, because two tests sharing a wallet couple their balances and fail in
@@ -108,7 +115,7 @@ whichever order is unlucky.
 | 2 | `demo-api` skeleton, docker compose, CI | ✅ done |
 | 3 | `user` service — registration and login turn green | ✅ done |
 | 4 | `wallet` service — balances, ledger, reconciliation | ✅ done |
-| 5 | `payment` service — the deposit approval journey turns green | next |
-| 6 | `promotion` service — deposits with a bonus attached | |
+| 5 | `payment` service — the deposit approval journey turns green | ✅ done |
+| 6 | `promotion` service — deposits with a bonus attached | next |
 | 7 | Browser layer over a minimal UI | |
 | 8 | Load thresholds and an authorisation matrix | |

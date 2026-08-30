@@ -42,6 +42,23 @@ test.describe('submitting a deposit', () => {
     }
   })
 
+  /**
+   * Locks in strict bodies. A field the endpoint does not understand used to be
+   * stripped silently, so a request that meant something specific succeeded as
+   * if it had meant something else — see docs/lessons.md.
+   */
+  test('an unrecognised field is refused rather than ignored @p0 @negative @payment', async ({
+    player,
+  }) => {
+    const method = await player.client.payment.methods('BANK_TRANSFER')
+
+    expect(
+      await player.client.status('POST', '/payment/deposits', {
+        body: { amount: 100, gatewayConfigId: method.gatewayConfigId, promoCode: 'TYPO' },
+      }),
+    ).toBe(400)
+  })
+
   test('an unknown gateway is refused @negative @payment', async ({ player }) => {
     expect(
       await player.client.status('POST', '/payment/deposits', {

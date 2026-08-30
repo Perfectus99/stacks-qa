@@ -1,3 +1,5 @@
 export { makePlayer } from './factories.js'
 export type { Player } from './factories.js'
 export { uniqueUsername, DEFAULT_PASSWORD } from './naming.js'
+export { makePromotion } from './promotions.js'
+export type { SeededPromotion } from './promotions.js'

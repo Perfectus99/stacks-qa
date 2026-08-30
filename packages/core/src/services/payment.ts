@@ -15,6 +15,9 @@ export interface Deposit {
   flowType: FlowType
   amount: number
   userId: string
+  hasBonus: boolean
+  bonusAmount: number
+  releaseRequirement: number
 }
 
 export interface DepositSummary {
@@ -36,7 +39,11 @@ export class PaymentService {
     return match
   }
 
-  submitDeposit(input: { amount: number; gatewayConfigId: string }): Promise<Deposit> {
+  submitDeposit(input: {
+    amount: number
+    gatewayConfigId: string
+    promotionCode?: string
+  }): Promise<Deposit> {
     return this.api.post<Deposit>('/payment/deposits', { body: { ...input } })
   }
 

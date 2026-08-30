@@ -4,6 +4,7 @@ import { HttpError } from './http-error.js'
 import { UserService } from './services/user.js'
 import { WalletService } from './services/wallet.js'
 import { PaymentService } from './services/payment.js'
+import { PromotionService } from './services/promotion.js'
 
 type Body = Record<string, unknown>
 
@@ -26,6 +27,7 @@ export class ApiClient {
   readonly user: UserService
   readonly wallet: WalletService
   readonly payment: PaymentService
+  readonly promotion: PromotionService
 
   private constructor(
     private readonly ctx: APIRequestContext,
@@ -34,6 +36,7 @@ export class ApiClient {
     this.user = new UserService(this)
     this.wallet = new WalletService(this)
     this.payment = new PaymentService(this)
+    this.promotion = new PromotionService(this)
   }
 
   /** An unauthenticated client — registration and login only. */

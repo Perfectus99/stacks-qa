@@ -4,6 +4,7 @@ import { registerAuth } from './plugins/auth.js'
 import { userRoutes } from './modules/user/routes.js'
 import { walletRoutes } from './modules/wallet/routes.js'
 import { paymentRoutes } from './modules/payment/routes.js'
+import { promotionRoutes } from './modules/promotion/routes.js'
 import { ping } from './db.js'
 
 /**
@@ -31,6 +32,7 @@ export function buildApp(): FastifyInstance {
   void app.register(userRoutes, { prefix: '/user' })
   void app.register(walletRoutes, { prefix: '/wallet' })
   void app.register(paymentRoutes, { prefix: '/payment' })
+  void app.register(promotionRoutes, { prefix: '/promotion' })
 
   return app
 }

@@ -14,7 +14,8 @@
     "dev": "npm run dev --workspace apps/demo-api",
     "build": "npm run build --workspace apps/demo-api",
     "lint": "eslint .",
-    "test:ci": "npm run test:ci --workspace suites/regression"
+    "test:ci": "npm run test:ci --workspace suites/regression",
+    "test:unit": "npm run test --workspace apps/demo-api"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

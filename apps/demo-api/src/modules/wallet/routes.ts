@@ -9,7 +9,7 @@ const adjustmentBody = z.object({
   userId: z.string().uuid(),
   amount: z.number().finite(),
   reason: z.string().min(1).max(200),
-})
+}).strict()
 
 /**
  * A wallet's currency comes from the account, not the request. A caller able to

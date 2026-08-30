@@ -1,26 +1,20 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { ApiError } from '../../errors.js'
+import { parse } from '../../validation.js'
 import { requireAdmin, requireSession } from '../../plugins/auth.js'
 import { decide, list, methods, submitDeposit, view } from './service.js'
 
 const submitBody = z.object({
   amount: z.number().finite(),
   gatewayConfigId: z.string().uuid(),
-})
+  promotionCode: z.string().min(1).max(40).optional(),
+}).strict()
 
 const decisionBody = z.object({
   status: z.enum(['APPROVED', 'REJECTED']),
   reason: z.string().max(200).optional(),
-})
-
-function parse<T>(schema: z.ZodType<T>, body: unknown): T {
-  const result = schema.safeParse(body)
-  if (!result.success) {
-    throw new ApiError(400, 'INVALID_REQUEST', result.error.issues[0]?.message ?? 'Invalid body')
-  }
-  return result.data
-}
+}).strict()
 
 /**
  * Deposits and their approval.

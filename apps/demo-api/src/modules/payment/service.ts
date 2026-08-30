@@ -4,6 +4,7 @@ import { toMajor, toMinor } from '../../money.js'
 import type { Principal } from '../../plugins/auth.js'
 import { accountOf } from '../user/directory.js'
 import { creditAccount } from '../wallet/credit.js'
+import { attachPromotion, settlePromotion } from '../promotion/attachment.js'
 import {
   findDeposit,
   findGateway,
@@ -21,15 +22,27 @@ export interface Deposit {
   flowType: string
   amount: number
   userId: string
+  hasBonus: boolean
+  bonusAmount: number
+  releaseRequirement: number
 }
 
-function present(row: DepositRow): Deposit {
+function present(
+  row: DepositRow,
+  bonus: { bonusMinor: number; releaseRequirementMinor: number } = {
+    bonusMinor: 0,
+    releaseRequirementMinor: 0,
+  },
+): Deposit {
   return {
     depositId: row.deposit_id,
     status: row.status,
     flowType: row.flow_type,
     amount: toMajor(row.amount_minor),
     userId: row.user_id,
+    hasBonus: bonus.bonusMinor > 0,
+    bonusAmount: toMajor(bonus.bonusMinor),
+    releaseRequirement: toMajor(bonus.releaseRequirementMinor),
   }
 }
 
@@ -46,7 +59,7 @@ export async function methods(principal: Principal): Promise<
 
 export async function submitDeposit(
   principal: Principal,
-  input: { amount: number; gatewayConfigId: string },
+  input: { amount: number; gatewayConfigId: string; promotionCode?: string },
 ): Promise<Deposit> {
   const amountMinor = toMinor(input.amount)
   if (amountMinor <= 0) {
@@ -60,15 +73,29 @@ export async function submitDeposit(
 
   // Nothing is credited here. The money moves when someone decides, which is
   // the whole point of a manual deposit.
-  return present(
-    await insertDeposit({
+  //
+  // The deposit and its promotion are written together: a deposit that recorded
+  // a bonus it is not attached to, or an attachment pointing at no deposit,
+  // would both be worse than refusing the submission outright.
+  return sql.begin(async (tx) => {
+    const row = await insertDeposit(tx, {
       tenantId: principal.tenantId,
       userId: principal.userId,
       gatewayConfigId: gateway.gateway_config_id,
       flowType: gateway.flow_type,
       amountMinor,
-    }),
-  )
+    })
+
+    if (!input.promotionCode) return present(row)
+
+    const bonus = await attachPromotion(tx, {
+      depositId: row.deposit_id,
+      tenantId: principal.tenantId,
+      code: input.promotionCode,
+      amountMinor,
+    })
+    return present(row, bonus)
+  })
 }
 
 export async function view(principal: Principal, depositId: string): Promise<Deposit> {
@@ -87,7 +114,7 @@ export async function list(
   })
 
   return {
-    deposits: rows.map(present),
+    deposits: rows.map((row) => present(row)),
     summary: { pendingCount: pending, completedCount: completed },
   }
 }
@@ -135,6 +162,25 @@ export async function decide(
       type: 'DEPOSIT',
       amountMinor: Number(row.amount_minor),
     })
+
+    // Eligibility is decided again here, not read back from the preview. The
+    // deposit is approved and credited either way; only the bonus depends on
+    // whether the promotion still applies at this moment.
+    const bonus = await settlePromotion(tx, {
+      depositId: row.deposit_id,
+      amountMinor: Number(row.amount_minor),
+    })
+
+    if (bonus.grantedBonusMinor > 0) {
+      await creditAccount(tx, {
+        userId: account.userId,
+        tenantId: account.tenantId,
+        currency: account.currency,
+        referenceId: row.deposit_id,
+        type: 'BONUS',
+        amountMinor: bonus.grantedBonusMinor,
+      })
+    }
   })
 
   return { success: true }

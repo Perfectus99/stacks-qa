@@ -38,14 +38,17 @@ export async function findGateway(
   return row
 }
 
-export async function insertDeposit(input: {
-  tenantId: string
-  userId: string
-  gatewayConfigId: string
-  flowType: string
-  amountMinor: number
-}): Promise<DepositRow> {
-  const [row] = await sql<DepositRow[]>`
+export async function insertDeposit(
+  db: TransactionSql,
+  input: {
+    tenantId: string
+    userId: string
+    gatewayConfigId: string
+    flowType: string
+    amountMinor: number
+  },
+): Promise<DepositRow> {
+  const [row] = await db<DepositRow[]>`
     insert into deposits (tenant_id, user_id, gateway_config_id, flow_type, amount_minor)
     values (${input.tenantId}, ${input.userId}, ${input.gatewayConfigId},
             ${input.flowType}, ${input.amountMinor})

@@ -1,6 +1,26 @@
 import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { ApiError } from '../../errors.js'
 import { requireAdmin, requireSession } from '../../plugins/auth.js'
+import { decide, list, methods, submitDeposit, view } from './service.js'
+
+const submitBody = z.object({
+  amount: z.number().finite(),
+  gatewayConfigId: z.string().uuid(),
+})
+
+const decisionBody = z.object({
+  status: z.enum(['APPROVED', 'REJECTED']),
+  reason: z.string().max(200).optional(),
+})
+
+function parse<T>(schema: z.ZodType<T>, body: unknown): T {
+  const result = schema.safeParse(body)
+  if (!result.success) {
+    throw new ApiError(400, 'INVALID_REQUEST', result.error.issues[0]?.message ?? 'Invalid body')
+  }
+  return result.data
+}
 
 /**
  * Deposits and their approval.
@@ -10,28 +30,24 @@ import { requireAdmin, requireSession } from '../../plugins/auth.js'
  * security tests does.
  */
 export async function paymentRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/methods', async (request) => {
-    requireSession(request)
-    throw ApiError.notImplemented('Payment methods')
+  app.get('/methods', async (request) => methods(requireSession(request)))
+
+  app.post('/deposits', async (request, reply) => {
+    const principal = requireSession(request)
+    return reply.status(201).send(await submitDeposit(principal, parse(submitBody, request.body)))
   })
 
-  app.post('/deposits', async (request) => {
-    requireSession(request)
-    throw ApiError.notImplemented('Deposit submission')
-  })
-
-  app.get('/admin/deposits', async (request) => {
-    requireAdmin(request)
-    throw ApiError.notImplemented('Deposit list')
+  app.get<{ Querystring: { userId?: string } }>('/admin/deposits', async (request) => {
+    return list(requireAdmin(request), { userId: request.query.userId })
   })
 
   app.get<{ Params: { depositId: string } }>('/admin/deposits/:depositId', async (request) => {
-    requireAdmin(request)
-    throw ApiError.notImplemented('Deposit detail')
+    return view(requireAdmin(request), request.params.depositId)
   })
 
   app.patch<{ Params: { depositId: string } }>('/admin/deposits/:depositId', async (request) => {
-    requireAdmin(request)
-    throw ApiError.notImplemented('Deposit approval')
+    const principal = requireAdmin(request)
+    const { status } = parse(decisionBody, request.body)
+    return decide(principal, { depositId: request.params.depositId, status })
   })
 }

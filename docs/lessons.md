@@ -4,6 +4,31 @@ Mistakes already paid for once. Newest first.
 
 ---
 
+## Verified against a build that never happened
+
+**What happened.** Checking that the new response-contract layer had teeth meant
+breaking a field name and watching the tests go red. They stayed green.
+
+The rename had failed to compile, so the image never rebuilt, and the container
+still ran the previous build. The rebuild command's output had been sent to
+`/dev/null`, so the failure was invisible — the check appeared to prove the
+contract layer was useless when it had never been exercised at all.
+
+**Why it matters.** Every "I broke it and the test still passed" conclusion
+depends on the break actually reaching the running system. Silence from a build
+step is not the same as success, and a container that fails to rebuild keeps
+serving the old answer perfectly convincingly.
+
+**The rule.** Confirm the change reached the system before drawing any
+conclusion from it — read the build output, and check the running service
+returns the broken shape. Never send a build's output to `/dev/null` while
+relying on it.
+
+**Related:** the same rule the other way round —
+[`bugs/001`](bugs/001-double-credit-on-concurrent-approval.md).
+
+---
+
 ## A field the client sent and the server quietly threw away
 
 **What happened.** Deposits gained an optional `promotionCode`. The client sent

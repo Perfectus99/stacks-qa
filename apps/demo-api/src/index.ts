@@ -2,6 +2,7 @@ import { buildApp } from './app.js'
 import { env } from './env.js'
 import { migrate } from './migrate.js'
 import { seed } from './seed.js'
+import { drain } from './jobs/queue.js'
 
 const app = buildApp()
 
@@ -18,6 +19,8 @@ try {
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
-    void app.close().then(() => process.exit(0))
+    void drain()
+      .then(() => app.close())
+      .then(() => process.exit(0))
   })
 }

@@ -23,6 +23,7 @@ services:
       JWT_SECRET: development-only-secret
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin-password
+      PROGRESS_DELAY_MS: 250
     ports:
       - "3100:3000"
     depends_on:

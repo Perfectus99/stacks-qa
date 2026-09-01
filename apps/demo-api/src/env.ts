@@ -9,6 +9,11 @@ export const env = {
   host: required('HOST', '0.0.0.0'),
   databaseUrl: required('DATABASE_URL', 'postgres://stacks:stacks@localhost:5432/stacks'),
   jwtSecret: required('JWT_SECRET', 'development-only-secret'),
+  /**
+   * How long release progress takes to be applied. Small, and never zero —
+   * see jobs/queue.ts.
+   */
+  progressDelayMs: Number(required('PROGRESS_DELAY_MS', '250')),
   admin: {
     username: required('ADMIN_USERNAME', 'admin'),
     password: required('ADMIN_PASSWORD', 'admin-password'),

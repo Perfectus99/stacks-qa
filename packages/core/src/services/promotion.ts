@@ -55,6 +55,10 @@ export class PromotionService {
     return contract('POST /promotion/admin/promotions', contracts.createdPromotion, body)
   }
 
+  async remove(promotionId: string): Promise<void> {
+    await this.api.delete(`/promotion/admin/promotions/${promotionId}`)
+  }
+
   setActive(promotionId: string, active: boolean): Promise<{ success: boolean }> {
     return this.api.patch(`/promotion/admin/promotions/${promotionId}`, { body: { active } })
   }

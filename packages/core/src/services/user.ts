@@ -44,6 +44,11 @@ export class UserService {
     return contract('POST /user/auth/login', contracts.session, body)
   }
 
+  /** Close a player account, taking its wallet, ledger and deposits with it. */
+  async closeAccount(userId: string): Promise<void> {
+    await this.api.delete(`/user/admin/users/${userId}`)
+  }
+
   async profile(): Promise<Profile> {
     return contract('GET /user/profile', contracts.profile, await this.api.get('/user/profile'))
   }

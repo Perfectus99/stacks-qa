@@ -7,6 +7,8 @@ export interface Player {
   password: string
   userId: string
   currency: string
+  tenantSlug: string
+  /** Close the HTTP context. Account removal is the cleanup registry's job. */
   dispose(): Promise<void>
 }
 
@@ -18,18 +20,21 @@ export interface Player {
  * reason unrelated to what it asserts.
  */
 export async function makePlayer(
-  options: { currency?: string } = {},
+  options: { currency?: string; tenantSlug?: string; username?: string } = {},
 ): Promise<Player> {
   const currency = options.currency ?? 'USD'
-  const username = uniqueUsername(currency)
+  const tenantSlug = options.tenantSlug ?? 'demo'
+  // A caller may name the account — the isolation tests need the same username
+  // in two tenants — but it still goes through here, so it is still cleaned up.
+  const username = options.username ?? uniqueUsername(currency)
   const password = DEFAULT_PASSWORD
 
-  const anonymous = await ApiClient.anonymous()
+  const anonymous = await ApiClient.anonymous(tenantSlug)
   const registered = await anonymous.user.register({ username, password, currency })
   const session = await anonymous.user.login({ username, password })
   await anonymous.dispose()
 
-  const client = (await ApiClient.anonymous()).authenticatedAs(session.accessToken)
+  const client = (await ApiClient.anonymous(tenantSlug)).authenticatedAs(session.accessToken)
 
   return {
     client,
@@ -37,6 +42,7 @@ export async function makePlayer(
     password,
     userId: registered.userId,
     currency,
+    tenantSlug,
     dispose: () => client.dispose(),
   }
 }

@@ -32,6 +32,7 @@ export class ApiClient {
   private constructor(
     private readonly ctx: APIRequestContext,
     private token: string | undefined,
+    readonly tenantSlug: string,
   ) {
     this.user = new UserService(this)
     this.wallet = new WalletService(this)
@@ -39,22 +40,33 @@ export class ApiClient {
     this.promotion = new PromotionService(this)
   }
 
-  /** An unauthenticated client — registration and login only. */
-  static async anonymous(): Promise<ApiClient> {
+  /**
+   * An unauthenticated client — registration and login only.
+   *
+   * The tenant travels on every request. Registration and login need it because
+   * they have no session to read it from; on authenticated calls it is ignored,
+   * and sending it anyway keeps one client honest about which tenant it speaks
+   * for.
+   */
+  static async anonymous(tenantSlug = 'demo'): Promise<ApiClient> {
     const ctx = await request.newContext({ baseURL: env.baseUrl })
-    return new ApiClient(ctx, undefined)
+    return new ApiClient(ctx, undefined, tenantSlug)
   }
 
   /** Log in and return a client that carries the resulting session. */
-  static async asUser(username: string, password: string): Promise<ApiClient> {
-    const client = await ApiClient.anonymous()
+  static async asUser(
+    username: string,
+    password: string,
+    tenantSlug = 'demo',
+  ): Promise<ApiClient> {
+    const client = await ApiClient.anonymous(tenantSlug)
     const session = await client.user.login({ username, password })
     return client.authenticatedAs(session.accessToken)
   }
 
-  /** Log in as the seeded administrator. */
-  static async asAdmin(): Promise<ApiClient> {
-    return ApiClient.asUser(env.admin.username, env.admin.password)
+  /** Log in as a tenant's seeded administrator. */
+  static async asAdmin(tenantSlug = 'demo'): Promise<ApiClient> {
+    return ApiClient.asUser(env.admin.username, env.admin.password, tenantSlug)
   }
 
   authenticatedAs(token: string): this {
@@ -78,8 +90,16 @@ export class ApiClient {
     return this.send<T>('PATCH', path, options)
   }
 
+  delete<T>(path: string, options: SendOptions = {}): Promise<T> {
+    return this.send<T>('DELETE', path, options)
+  }
+
   /** Send a request and return its status without throwing — for negative tests. */
-  async status(method: 'GET' | 'POST' | 'PATCH', path: string, options: SendOptions = {}): Promise<number> {
+  async status(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    options: SendOptions = {},
+  ): Promise<number> {
     const response = await this.ctx.fetch(this.url(path, options.query), {
       method,
       headers: this.headers(),
@@ -88,7 +108,11 @@ export class ApiClient {
     return response.status()
   }
 
-  private async send<T>(method: 'GET' | 'POST' | 'PATCH', path: string, options: SendOptions): Promise<T> {
+  private async send<T>(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    options: SendOptions,
+  ): Promise<T> {
     const url = this.url(path, options.query)
     const response = await this.ctx.fetch(url, {
       method,
@@ -128,6 +152,9 @@ export class ApiClient {
   }
 
   private headers(): Record<string, string> {
-    return this.token ? { Authorization: `Bearer ${this.token}` } : {}
+    return {
+      'x-tenant-slug': this.tenantSlug,
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+    }
   }
 }

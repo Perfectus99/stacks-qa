@@ -9,6 +9,7 @@ async function fundedWithBonus(
   newPromotion: (o?: Partial<NewPromotion>) => Promise<SeededPromotion>,
   overrides: Partial<NewPromotion> = {},
 ): Promise<{ depositId: string }> {
+  return test.step('Given an approved deposit of 100 carrying a 50 bonus', async () => {
   const promotion = await newPromotion({
     bonusPercent: 50,
     minDeposit: 10,
@@ -23,6 +24,7 @@ async function fundedWithBonus(
   })
   await admin.payment.approveDeposit(deposit.depositId)
   return { depositId: deposit.depositId }
+  })
 }
 
 /**
@@ -76,13 +78,16 @@ test.describe('holds', () => {
     const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
 
-    await player.client.wallet.spend({ amount: 150, reason: 'qualifying spend' })
+    await test.step('When the player spends the full requirement of 150', async () => {
+      await player.client.wallet.spend({ amount: 150, reason: 'qualifying spend' })
+    })
 
-    await expect
-      .poll(async () => (await currentHold(player, depositId)).status)
-      .toBe('RELEASED')
-
-    expect((await currentHold(player, depositId)).progress).toBe(150)
+    await test.step('Then the hold is released once the job catches up', async () => {
+      await expect
+        .poll(async () => (await currentHold(player, depositId)).status)
+        .toBe('RELEASED')
+      expect((await currentHold(player, depositId)).progress).toBe(150)
+    })
   })
 
   test('spend short of the requirement leaves the hold in place @p0 @wallet', async ({
@@ -93,10 +98,14 @@ test.describe('holds', () => {
     const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
 
-    await player.client.wallet.spend({ amount: 60, reason: 'partial' })
+    await test.step('When the player spends 60 of the 150 required', async () => {
+      await player.client.wallet.spend({ amount: 60, reason: 'partial' })
+    })
 
-    await expect.poll(async () => (await currentHold(player, depositId)).progress).toBe(60)
-    expect((await currentHold(player, depositId)).status).toBe('ACTIVE')
+    await test.step('Then progress moves but the hold stays in place', async () => {
+      await expect.poll(async () => (await currentHold(player, depositId)).progress).toBe(60)
+      expect((await currentHold(player, depositId)).status).toBe('ACTIVE')
+    })
   })
 
   /**
@@ -112,11 +121,15 @@ test.describe('holds', () => {
     const { depositId } = await fundedWithBonus(player, admin, newPromotion, { holdDays: 0 })
     await holdFor(player, depositId)
 
-    await player.client.wallet.spend({ amount: 150, reason: 'too late' })
+    await test.step('When enough spend arrives, but after the deadline', async () => {
+      await player.client.wallet.spend({ amount: 150, reason: 'too late' })
+    })
 
-    await expect
-      .poll(async () => (await currentHold(player, depositId)).status)
-      .toBe('EXPIRED')
+    await test.step('Then the hold expires rather than releasing', async () => {
+      await expect
+        .poll(async () => (await currentHold(player, depositId)).status)
+        .toBe('EXPIRED')
+    })
   })
 
   test('an administrator can end a hold early @p0 @wallet', async ({ player, admin, newPromotion }) => {

@@ -7,7 +7,9 @@ payments and promotions — **with the system under test included**, so the whol
 thing runs from a clean clone.
 
 **[Read the latest test report →](https://perfectus99.github.io/stacks-qa/)**
-Published from `main` on every green run: every test, its steps, and its timing.
+Published from `main` on every green run. Journeys are written in named steps,
+so the report reads as the business chain rather than a list of HTTP calls —
+`playwright-report/summary.md` beside it is the plain-text version.
 
 ```bash
 git clone https://github.com/Perfectus99/stacks-qa && cd stacks-qa
@@ -99,6 +101,19 @@ authorisation matrix in `tests/security/` — no single service owns them.
 The contract layer is the one most suites skip. Status assertions sail straight
 past a renamed field; business assertions only catch fields they happen to read.
 Here a break fails in the call that caused it, naming the field.
+
+**Journeys are written in named steps.** The report's default view is HTTP calls
+and source lines, which is the right level for debugging a failure and the wrong
+level for understanding what a chain covers. Named steps make the report legible
+to somebody who has never seen the code, and show which step it stopped at.
+
+**Two reports, because there are two questions.** The HTML report answers "what
+happened in this test". A custom reporter
+([`reporters/summary.ts`](suites/regression/reporters/summary.ts)) answers "what
+does the suite cover and is it healthy" — totals, coverage by area and intent,
+failures, flakes and the slowest tests, as Markdown. It prints to the console,
+writes `playwright-report/summary.md`, and appends to the GitHub Actions job
+summary so the run page itself carries it.
 
 **Actors are fixtures.** `admin` is worker-scoped, because admin state is
 read-mostly and one login per worker is enough. `player` is test-scoped and

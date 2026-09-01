@@ -14,9 +14,11 @@ export default defineConfig({
   // Nothing may be committed with .only.
   forbidOnly: isCI,
 
+  // The HTML report is for debugging a failure; the summary is for reading what
+  // the suite covers and whether it is healthy. Different questions, so both.
   reporter: isCI
-    ? [['html', { open: 'never' }], ['github'], ['list']]
-    : [['html', { open: 'never' }], ['list']],
+    ? [['html', { open: 'never' }], ['./reporters/summary.ts'], ['github'], ['list']]
+    : [['html', { open: 'never' }], ['./reporters/summary.ts'], ['list']],
 
   use: {
     trace: 'retain-on-failure',

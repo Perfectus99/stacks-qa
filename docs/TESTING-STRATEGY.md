@@ -147,7 +147,25 @@ Applied so far to:
 Two of those first passed against the broken build and had to be rewritten. The
 record is in [`lessons.md`](lessons.md).
 
-## 8. Gates
+## 8. Reporting
+
+Two reports, because there are two different questions.
+
+| Report | Answers | Audience |
+|---|---|---|
+| Playwright HTML | "What happened in this test?" — every step, call and assertion, with a trace on failure | Whoever is debugging it |
+| `summary.md` (custom reporter) | "What does this suite cover, and is it healthy?" — totals, coverage by area and intent, failures, flakes, slowest tests | Anybody else |
+
+The summary goes to the console, to a file beside the HTML report, and to the
+GitHub Actions job summary, so a run page carries a readable answer without
+anyone downloading an artefact.
+
+Journeys are written in named `test.step()` calls. The default report view is
+HTTP calls and source locations, which is the right level for a failure and the
+wrong level for understanding coverage — a reader who has never seen the code
+should still be able to follow the chain and see which step it stopped at.
+
+## 9. Gates
 
 | Gate | Runs | Blocks |
 |---|---|---|

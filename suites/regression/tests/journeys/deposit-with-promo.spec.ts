@@ -12,36 +12,52 @@ test('a deposit with a promotion credits both the deposit and the bonus @p0 @pay
   admin,
   newPromotion,
 }) => {
-  const promotion = await newPromotion({ bonusPercent: 50, minDeposit: 10 })
-
-  const preview = await player.client.promotion.preview({ code: promotion.code, amount: 100 })
-  expect(preview).toMatchObject({ eligible: true, hasBonus: true, bonusAmount: 50 })
-
-  const method = await player.client.payment.methods('BANK_TRANSFER')
-  const deposit = await player.client.payment.submitDeposit({
-    amount: 100,
-    gatewayConfigId: method.gatewayConfigId,
-    promotionCode: promotion.code,
+  const promotion = await test.step('Given a promotion offering 50% on deposits over 10', async () => {
+    return newPromotion({ bonusPercent: 50, minDeposit: 10 })
   })
 
-  expect(deposit).toMatchObject({ status: 'PENDING_APPROVAL', hasBonus: true, bonusAmount: 50 })
-  expect(await player.client.wallet.balance()).toBe(0)
+  await test.step('When the player previews a deposit of 100', async () => {
+    const preview = await player.client.promotion.preview({ code: promotion.code, amount: 100 })
+    expect(preview).toMatchObject({ eligible: true, hasBonus: true, bonusAmount: 50 })
+  })
 
-  await admin.payment.approveDeposit(deposit.depositId)
+  const deposit = await test.step('And submits it citing the promotion', async () => {
+    const method = await player.client.payment.methods('BANK_TRANSFER')
+    return player.client.payment.submitDeposit({
+      amount: 100,
+      gatewayConfigId: method.gatewayConfigId,
+      promotionCode: promotion.code,
+    })
+  })
 
-  expect(await player.client.wallet.balance()).toBe(150)
+  await test.step('Then it is pending with the bonus recorded, and nothing has moved', async () => {
+    expect(deposit).toMatchObject({ status: 'PENDING_APPROVAL', hasBonus: true, bonusAmount: 50 })
+    expect(await player.client.wallet.balance()).toBe(0)
+  })
 
-  const transactions = await player.client.wallet.transactions()
-  expect(transactions).toHaveLength(2)
-  expect(transactions).toContainEqual(
-    expect.objectContaining({ type: 'DEPOSIT', amount: 100, referenceId: deposit.depositId }),
-  )
-  expect(transactions).toContainEqual(
-    expect.objectContaining({ type: 'BONUS', amount: 50, referenceId: deposit.depositId }),
-  )
+  await test.step('When the administrator approves it', async () => {
+    await admin.payment.approveDeposit(deposit.depositId)
+  })
 
-  const state = await player.client.wallet.reconciliation()
-  expect(state).toMatchObject({ balance: 150, ledgerTotal: 150, balanced: true })
+  await test.step('Then the balance is the deposit plus the bonus', async () => {
+    expect(await player.client.wallet.balance()).toBe(150)
+  })
+
+  await test.step('And both movements are recorded against the deposit', async () => {
+    const transactions = await player.client.wallet.transactions()
+    expect(transactions).toHaveLength(2)
+    expect(transactions).toContainEqual(
+      expect.objectContaining({ type: 'DEPOSIT', amount: 100, referenceId: deposit.depositId }),
+    )
+    expect(transactions).toContainEqual(
+      expect.objectContaining({ type: 'BONUS', amount: 50, referenceId: deposit.depositId }),
+    )
+  })
+
+  await test.step('And the ledger still reconciles', async () => {
+    const state = await player.client.wallet.reconciliation()
+    expect(state).toMatchObject({ balance: 150, ledgerTotal: 150, balanced: true })
+  })
 })
 
 /**
@@ -59,24 +75,35 @@ test('a promotion withdrawn before approval pays no bonus, and the deposit still
 }) => {
   const promotion = await newPromotion({ bonusPercent: 50, minDeposit: 10 })
 
-  const method = await player.client.payment.methods('BANK_TRANSFER')
-  const deposit = await player.client.payment.submitDeposit({
-    amount: 100,
-    gatewayConfigId: method.gatewayConfigId,
-    promotionCode: promotion.code,
+  const deposit = await test.step('Given a pending deposit citing a live promotion', async () => {
+    const method = await player.client.payment.methods('BANK_TRANSFER')
+    const submitted = await player.client.payment.submitDeposit({
+      amount: 100,
+      gatewayConfigId: method.gatewayConfigId,
+      promotionCode: promotion.code,
+    })
+    expect(submitted.hasBonus).toBe(true)
+    return submitted
   })
-  expect(deposit.hasBonus).toBe(true)
 
-  await admin.promotion.setActive(promotion.promotionId, false)
+  await test.step('When the promotion is withdrawn before anyone approves it', async () => {
+    await admin.promotion.setActive(promotion.promotionId, false)
+  })
 
-  await admin.payment.approveDeposit(deposit.depositId)
+  await test.step('And the administrator approves the deposit', async () => {
+    await admin.payment.approveDeposit(deposit.depositId)
+  })
 
-  expect(await player.client.wallet.balance()).toBe(100)
-  const transactions = await player.client.wallet.transactions()
-  expect(transactions).toHaveLength(1)
-  expect(transactions[0]).toMatchObject({ type: 'DEPOSIT', amount: 100 })
+  await test.step('Then the deposit lands in full', async () => {
+    expect(await player.client.wallet.balance()).toBe(100)
+    expect((await admin.payment.viewDeposit(deposit.depositId)).status).toBe('APPROVED')
+  })
 
-  expect((await admin.payment.viewDeposit(deposit.depositId)).status).toBe('APPROVED')
+  await test.step('And no bonus is paid', async () => {
+    const transactions = await player.client.wallet.transactions()
+    expect(transactions).toHaveLength(1)
+    expect(transactions[0]).toMatchObject({ type: 'DEPOSIT', amount: 100 })
+  })
 })
 
 test('a deposit citing an ineligible promotion is refused @negative @payment @promotion', async ({
@@ -85,14 +112,23 @@ test('a deposit citing an ineligible promotion is refused @negative @payment @pr
   newPromotion,
 }) => {
   const promotion = await newPromotion({ minDeposit: 500 })
-  const method = await player.client.payment.methods('BANK_TRANSFER')
 
-  const status = await player.client.status('POST', '/payment/deposits', {
-    body: { amount: 100, gatewayConfigId: method.gatewayConfigId, promotionCode: promotion.code },
+  await test.step('When the player deposits below the promotion minimum', async () => {
+    const method = await player.client.payment.methods('BANK_TRANSFER')
+    const status = await player.client.status('POST', '/payment/deposits', {
+      body: {
+        amount: 100,
+        gatewayConfigId: method.gatewayConfigId,
+        promotionCode: promotion.code,
+      },
+    })
+    expect(status).toBe(409)
   })
 
-  expect(status).toBe(409)
-  // The refusal must leave no deposit behind, not a pending one nobody asked for.
-  const { deposits } = await admin.payment.listDeposits({ userId: player.userId })
-  expect(deposits).toHaveLength(0)
+  await test.step('Then no deposit is left behind', async () => {
+    // A refusal that still created a pending deposit would be worse than the
+    // refusal itself — somebody would eventually approve it.
+    const { deposits } = await admin.payment.listDeposits({ userId: player.userId })
+    expect(deposits).toHaveLength(0)
+  })
 })

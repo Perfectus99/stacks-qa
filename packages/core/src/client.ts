@@ -1,6 +1,7 @@
 import { request, type APIRequestContext } from '@playwright/test'
 import { env } from './env.js'
 import { HttpError } from './http-error.js'
+import { apiError, contract } from './contracts.js'
 import { UserService } from './services/user.js'
 import { WalletService } from './services/wallet.js'
 import { PaymentService } from './services/payment.js'
@@ -122,7 +123,14 @@ export class ApiClient {
 
     const payload = await this.parse(response.headers()['content-type'], response)
     const allowed = options.allow ?? []
+
     if (!response.ok() && !allowed.includes(response.status())) {
+      // The error body is part of the contract too. A failure that answers in
+      // the framework's shape instead of the platform's is a break worth
+      // hearing about, even though the request was going to fail anyway.
+      if (payload !== undefined) {
+        contract(`${method} ${url} (${response.status()})`, apiError, payload)
+      }
       throw new HttpError(response.status(), method, url, payload)
     }
     return payload as T

@@ -117,5 +117,17 @@ export const bonusPreview = z.object({
   reason: z.string().nullable(),
 })
 
+/**
+ * Every failure answers in this shape.
+ *
+ * Checked on the way out of the client, so a handler that escapes the error
+ * handler and returns the framework's own body is caught here rather than
+ * surfacing as a test asserting on a `code` that is suddenly absent.
+ */
+export const apiError = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+})
+
 export const success = z.object({ success: z.boolean() })
 export const createdPromotion = z.object({ promotionId: id, code: z.string() })

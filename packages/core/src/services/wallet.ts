@@ -1,4 +1,7 @@
 import type { ApiClient } from '../client.js'
+import * as contracts from '../contracts.js'
+import { contract } from '../contracts.js'
+import { z } from 'zod'
 
 export interface Balance {
   currency: string
@@ -35,20 +38,23 @@ export class WalletService {
   constructor(private readonly api: ApiClient) {}
 
   async balance(): Promise<number> {
-    const { available } = await this.api.get<Balance>('/wallet/balance')
-    return available
+    const body = await this.api.get('/wallet/balance')
+    return contract('GET /wallet/balance', contracts.balance, body).available
   }
 
-  transactions(): Promise<Transaction[]> {
-    return this.api.get<Transaction[]>('/wallet/transactions')
+  async transactions(): Promise<Transaction[]> {
+    const body = await this.api.get('/wallet/transactions')
+    return contract('GET /wallet/transactions', z.array(contracts.transaction), body)
   }
 
-  reconciliation(): Promise<Reconciliation> {
-    return this.api.get<Reconciliation>('/wallet/reconciliation')
+  async reconciliation(): Promise<Reconciliation> {
+    const body = await this.api.get('/wallet/reconciliation')
+    return contract('GET /wallet/reconciliation', contracts.reconciliation, body)
   }
 
-  holds(): Promise<Hold[]> {
-    return this.api.get<Hold[]>('/wallet/holds')
+  async holds(): Promise<Hold[]> {
+    const body = await this.api.get('/wallet/holds')
+    return contract('GET /wallet/holds', z.array(contracts.hold), body)
   }
 
   /**
@@ -57,18 +63,21 @@ export class WalletService {
    * The debit is immediate. The progress it earns towards a hold is applied by
    * a background job, so read progress with `expect.poll`, never straight back.
    */
-  spend(input: { amount: number; reason: string }): Promise<Transaction> {
-    return this.api.post<Transaction>('/wallet/spend', { body: { ...input } })
+  async spend(input: { amount: number; reason: string }): Promise<Transaction> {
+    const body = await this.api.post('/wallet/spend', { body: { ...input } })
+    return contract('POST /wallet/spend', contracts.transaction, body)
   }
 
   // ---- admin surface -------------------------------------------------------
 
   /** Credit (positive) or debit (negative) an account. Administrators only. */
-  adjust(input: { userId: string; amount: number; reason: string }): Promise<Transaction> {
-    return this.api.post<Transaction>('/wallet/admin/adjustments', { body: { ...input } })
+  async adjust(input: { userId: string; amount: number; reason: string }): Promise<Transaction> {
+    const body = await this.api.post('/wallet/admin/adjustments', { body: { ...input } })
+    return contract('POST /wallet/admin/adjustments', contracts.transaction, body)
   }
 
-  terminateHold(holdId: string): Promise<Hold> {
-    return this.api.post<Hold>(`/wallet/admin/holds/${holdId}/terminate`)
+  async terminateHold(holdId: string): Promise<Hold> {
+    const body = await this.api.post(`/wallet/admin/holds/${holdId}/terminate`)
+    return contract('POST /wallet/admin/holds/:id/terminate', contracts.hold, body)
   }
 }

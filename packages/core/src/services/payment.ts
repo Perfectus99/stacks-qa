@@ -1,4 +1,7 @@
 import type { ApiClient } from '../client.js'
+import * as contracts from '../contracts.js'
+import { contract } from '../contracts.js'
+import { z } from 'zod'
 
 export type FlowType = 'BANK_TRANSFER' | 'QR_TRANSFER'
 export type DepositStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'
@@ -29,7 +32,11 @@ export class PaymentService {
   constructor(private readonly api: ApiClient) {}
 
   async methods(flowType: FlowType): Promise<PaymentMethod> {
-    const options = await this.api.get<PaymentMethod[]>('/payment/methods')
+    const options = contract(
+      'GET /payment/methods',
+      z.array(contracts.paymentMethod),
+      await this.api.get('/payment/methods'),
+    )
     const match = options.find((option) => option.flowType === flowType)
     if (!match) {
       throw new Error(
@@ -39,12 +46,13 @@ export class PaymentService {
     return match
   }
 
-  submitDeposit(input: {
+  async submitDeposit(input: {
     amount: number
     gatewayConfigId: string
     promotionCode?: string
   }): Promise<Deposit> {
-    return this.api.post<Deposit>('/payment/deposits', { body: { ...input } })
+    const body = await this.api.post('/payment/deposits', { body: { ...input } })
+    return contract('POST /payment/deposits', contracts.deposit, body)
   }
 
   // ---- admin surface -------------------------------------------------------
@@ -55,12 +63,14 @@ export class PaymentService {
    * is only stable when nothing else is running — which is never true of a
    * parallel suite.
    */
-  listDeposits(filter: { userId?: string } = {}): Promise<DepositSummary> {
-    return this.api.get<DepositSummary>('/payment/admin/deposits', { query: filter })
+  async listDeposits(filter: { userId?: string } = {}): Promise<DepositSummary> {
+    const body = await this.api.get('/payment/admin/deposits', { query: filter })
+    return contract('GET /payment/admin/deposits', contracts.depositSummary, body)
   }
 
-  viewDeposit(depositId: string): Promise<Deposit> {
-    return this.api.get<Deposit>(`/payment/admin/deposits/${depositId}`)
+  async viewDeposit(depositId: string): Promise<Deposit> {
+    const body = await this.api.get(`/payment/admin/deposits/${depositId}`)
+    return contract('GET /payment/admin/deposits/:id', contracts.deposit, body)
   }
 
   approveDeposit(depositId: string): Promise<{ success: boolean }> {

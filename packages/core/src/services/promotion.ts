@@ -1,4 +1,7 @@
 import type { ApiClient } from '../client.js'
+import * as contracts from '../contracts.js'
+import { contract } from '../contracts.js'
+import { z } from 'zod'
 
 export interface PromotionSummary {
   promotionId: string
@@ -34,19 +37,22 @@ export interface NewPromotion {
 export class PromotionService {
   constructor(private readonly api: ApiClient) {}
 
-  list(): Promise<PromotionSummary[]> {
-    return this.api.get<PromotionSummary[]>('/promotion/promotions')
+  async list(): Promise<PromotionSummary[]> {
+    const body = await this.api.get('/promotion/promotions')
+    return contract('GET /promotion/promotions', z.array(contracts.promotionSummary), body)
   }
 
   /** A preview only — it moves nothing and binds nobody. */
-  preview(input: { code: string; amount: number }): Promise<BonusPreview> {
-    return this.api.post<BonusPreview>('/promotion/preview', { body: { ...input } })
+  async preview(input: { code: string; amount: number }): Promise<BonusPreview> {
+    const body = await this.api.post('/promotion/preview', { body: { ...input } })
+    return contract('POST /promotion/preview', contracts.bonusPreview, body)
   }
 
   // ---- admin surface -------------------------------------------------------
 
-  create(input: NewPromotion): Promise<{ promotionId: string; code: string }> {
-    return this.api.post('/promotion/admin/promotions', { body: { ...input } })
+  async create(input: NewPromotion): Promise<{ promotionId: string; code: string }> {
+    const body = await this.api.post('/promotion/admin/promotions', { body: { ...input } })
+    return contract('POST /promotion/admin/promotions', contracts.createdPromotion, body)
   }
 
   setActive(promotionId: string, active: boolean): Promise<{ success: boolean }> {

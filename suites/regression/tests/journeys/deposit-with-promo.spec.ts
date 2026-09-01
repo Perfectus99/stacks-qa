@@ -1,5 +1,4 @@
 import { test, expect } from '../../fixtures/index.js'
-import { makePromotion } from '@stacks/test-data'
 
 /**
  * The promotional deposit chain: preview, submit with the promotion attached,
@@ -11,8 +10,9 @@ import { makePromotion } from '@stacks/test-data'
 test('a deposit with a promotion credits both the deposit and the bonus @p0 @payment @promotion @wallet @journey', async ({
   player,
   admin,
+  newPromotion,
 }) => {
-  const promotion = await makePromotion(admin, { bonusPercent: 50, minDeposit: 10 })
+  const promotion = await newPromotion({ bonusPercent: 50, minDeposit: 10 })
 
   const preview = await player.client.promotion.preview({ code: promotion.code, amount: 100 })
   expect(preview).toMatchObject({ eligible: true, hasBonus: true, bonusAmount: 50 })
@@ -55,8 +55,9 @@ test('a deposit with a promotion credits both the deposit and the bonus @p0 @pay
 test('a promotion withdrawn before approval pays no bonus, and the deposit still lands @p0 @negative @payment @promotion @journey', async ({
   player,
   admin,
+  newPromotion,
 }) => {
-  const promotion = await makePromotion(admin, { bonusPercent: 50, minDeposit: 10 })
+  const promotion = await newPromotion({ bonusPercent: 50, minDeposit: 10 })
 
   const method = await player.client.payment.methods('BANK_TRANSFER')
   const deposit = await player.client.payment.submitDeposit({
@@ -81,8 +82,9 @@ test('a promotion withdrawn before approval pays no bonus, and the deposit still
 test('a deposit citing an ineligible promotion is refused @negative @payment @promotion', async ({
   player,
   admin,
+  newPromotion,
 }) => {
-  const promotion = await makePromotion(admin, { minDeposit: 500 })
+  const promotion = await newPromotion({ minDeposit: 500 })
   const method = await player.client.payment.methods('BANK_TRANSFER')
 
   const status = await player.client.status('POST', '/payment/deposits', {

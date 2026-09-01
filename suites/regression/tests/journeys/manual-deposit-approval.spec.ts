@@ -68,7 +68,7 @@ test('the ledger reconciles after a deposit is approved @p0 @wallet @journey', a
   expect(reconciliation.ledgerTotal).toBe(reconciliation.balance)
 })
 
-test('a deposit belonging to another tenant cannot be approved @negative @security @payment', async ({
+test('a player cannot approve their own deposit @negative @security @payment', async ({
   player,
 }) => {
   const method = await player.client.payment.methods('BANK_TRANSFER')
@@ -77,7 +77,8 @@ test('a deposit belonging to another tenant cannot be approved @negative @securi
     gatewayConfigId: method.gatewayConfigId,
   })
 
-  // A player is not an administrator, whatever tenant they belong to.
+  // Role, not tenancy. This test used to be named for tenant isolation, which
+  // it never asserted — that lives in tests/security/tenant-isolation.spec.ts.
   const status = await player.client.status(
     'PATCH',
     `/payment/admin/deposits/${deposit.depositId}`,

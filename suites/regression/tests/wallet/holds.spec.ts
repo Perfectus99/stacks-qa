@@ -1,16 +1,15 @@
 import { test, expect } from '../../fixtures/index.js'
-import { makePromotion } from '@stacks/test-data'
-import type { Hold } from '@stacks/core'
-import type { Player } from '@stacks/test-data'
-import type { ApiClient } from '@stacks/core'
+import type { ApiClient, Hold, NewPromotion } from '@stacks/core'
+import type { Player, SeededPromotion } from '@stacks/test-data'
 
 /** Deposit 100 with a 50% bonus: 150 credited, 150 required to release. */
 async function fundedWithBonus(
   player: Player,
   admin: ApiClient,
-  overrides: Parameters<typeof makePromotion>[1] = {},
+  newPromotion: (o?: Partial<NewPromotion>) => Promise<SeededPromotion>,
+  overrides: Partial<NewPromotion> = {},
 ): Promise<{ depositId: string }> {
-  const promotion = await makePromotion(admin, {
+  const promotion = await newPromotion({
     bonusPercent: 50,
     minDeposit: 10,
     releaseMultiplier: 1,
@@ -51,8 +50,9 @@ test.describe('holds', () => {
   test('an approved bonus is held with a release requirement @p0 @wallet @promotion', async ({
     player,
     admin,
+    newPromotion,
   }) => {
-    const { depositId } = await fundedWithBonus(player, admin)
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
 
     const hold = await currentHold(player, depositId)
@@ -71,8 +71,9 @@ test.describe('holds', () => {
   test('qualifying spend releases the hold once the requirement is met @p0 @wallet', async ({
     player,
     admin,
+    newPromotion,
   }) => {
-    const { depositId } = await fundedWithBonus(player, admin)
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
 
     await player.client.wallet.spend({ amount: 150, reason: 'qualifying spend' })
@@ -87,8 +88,9 @@ test.describe('holds', () => {
   test('spend short of the requirement leaves the hold in place @p0 @wallet', async ({
     player,
     admin,
+    newPromotion,
   }) => {
-    const { depositId } = await fundedWithBonus(player, admin)
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
 
     await player.client.wallet.spend({ amount: 60, reason: 'partial' })
@@ -105,8 +107,9 @@ test.describe('holds', () => {
   test('a hold past its deadline expires rather than releasing @p0 @negative @wallet', async ({
     player,
     admin,
+    newPromotion,
   }) => {
-    const { depositId } = await fundedWithBonus(player, admin, { holdDays: 0 })
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion, { holdDays: 0 })
     await holdFor(player, depositId)
 
     await player.client.wallet.spend({ amount: 150, reason: 'too late' })
@@ -116,8 +119,8 @@ test.describe('holds', () => {
       .toBe('EXPIRED')
   })
 
-  test('an administrator can end a hold early @p0 @wallet', async ({ player, admin }) => {
-    const { depositId } = await fundedWithBonus(player, admin)
+  test('an administrator can end a hold early @p0 @wallet', async ({ player, admin, newPromotion }) => {
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
     const hold = await currentHold(player, depositId)
 
@@ -129,8 +132,8 @@ test.describe('holds', () => {
     expect((await currentHold(player, depositId)).status).toBe('FORFEITED')
   })
 
-  test('a settled hold cannot be ended again @negative @wallet', async ({ player, admin }) => {
-    const { depositId } = await fundedWithBonus(player, admin)
+  test('a settled hold cannot be ended again @negative @wallet', async ({ player, admin, newPromotion }) => {
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
     const hold = await currentHold(player, depositId)
 
@@ -141,8 +144,9 @@ test.describe('holds', () => {
   test('a player cannot end their own hold @p0 @negative @security @wallet', async ({
     player,
     admin,
+    newPromotion,
   }) => {
-    const { depositId } = await fundedWithBonus(player, admin)
+    const { depositId } = await fundedWithBonus(player, admin, newPromotion)
     await holdFor(player, depositId)
     const hold = await currentHold(player, depositId)
 

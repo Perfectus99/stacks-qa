@@ -1,12 +1,11 @@
 import { test, expect } from '../../fixtures/index.js'
-import { makePromotion } from '@stacks/test-data'
 
 test.describe('previewing a bonus', () => {
   test('a qualifying deposit previews the bonus and the total @p0 @smoke @promotion', async ({
     player,
-    admin,
+    newPromotion,
   }) => {
-    const promotion = await makePromotion(admin, { bonusPercent: 50, minDeposit: 10 })
+    const promotion = await newPromotion({ bonusPercent: 50, minDeposit: 10 })
 
     const preview = await player.client.promotion.preview({ code: promotion.code, amount: 100 })
 
@@ -20,9 +19,9 @@ test.describe('previewing a bonus', () => {
 
   test('a deposit below the minimum is not eligible @p0 @negative @promotion', async ({
     player,
-    admin,
+    newPromotion,
   }) => {
-    const promotion = await makePromotion(admin, { minDeposit: 100 })
+    const promotion = await newPromotion({ minDeposit: 100 })
 
     const preview = await player.client.promotion.preview({ code: promotion.code, amount: 50 })
 
@@ -31,8 +30,8 @@ test.describe('previewing a bonus', () => {
     expect(preview.reason).toMatch(/minimum/i)
   })
 
-  test('the bonus is capped @p0 @promotion', async ({ player, admin }) => {
-    const promotion = await makePromotion(admin, { bonusPercent: 50, maxBonus: 20 })
+  test('the bonus is capped @p0 @promotion', async ({ player, newPromotion }) => {
+    const promotion = await newPromotion({ bonusPercent: 50, maxBonus: 20 })
 
     const preview = await player.client.promotion.preview({ code: promotion.code, amount: 1000 })
 
@@ -48,8 +47,8 @@ test.describe('previewing a bonus', () => {
   })
 
   /** A preview binds nobody — it must not create anything or move money. */
-  test('previewing moves nothing @p0 @promotion @wallet', async ({ player, admin }) => {
-    const promotion = await makePromotion(admin)
+  test('previewing moves nothing @p0 @promotion @wallet', async ({ player, newPromotion }) => {
+    const promotion = await newPromotion()
 
     await player.client.promotion.preview({ code: promotion.code, amount: 100 })
 

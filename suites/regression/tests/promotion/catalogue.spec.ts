@@ -1,9 +1,8 @@
 import { test, expect } from '../../fixtures/index.js'
-import { makePromotion } from '@stacks/test-data'
 
 test.describe('the promotion catalogue', () => {
-  test('lists a running promotion @p0 @smoke @promotion', async ({ player, admin }) => {
-    const promotion = await makePromotion(admin, { name: 'Half back' })
+  test('lists a running promotion @p0 @smoke @promotion', async ({ player, newPromotion }) => {
+    const promotion = await newPromotion({ name: 'Half back' })
 
     const listed = await player.client.promotion.list()
 
@@ -12,8 +11,8 @@ test.describe('the promotion catalogue', () => {
     )
   })
 
-  test('omits a withdrawn promotion @p0 @promotion', async ({ player, admin }) => {
-    const promotion = await makePromotion(admin)
+  test('omits a withdrawn promotion @p0 @promotion', async ({ player, admin, newPromotion }) => {
+    const promotion = await newPromotion()
     await admin.promotion.setActive(promotion.promotionId, false)
 
     const codes = (await player.client.promotion.list()).map((p) => p.code)

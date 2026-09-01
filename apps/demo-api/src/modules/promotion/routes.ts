@@ -6,7 +6,13 @@ import { parse } from '../../validation.js'
 import { toMajor, toMinor } from '../../money.js'
 import { requireAdmin, requireSession } from '../../plugins/auth.js'
 import { evaluate } from './eligibility.js'
-import { findByCode, insertPromotion, listActive, setActive } from './repository.js'
+import {
+  deletePromotion,
+  findByCode,
+  insertPromotion,
+  listActive,
+  setActive,
+} from './repository.js'
 
 const previewBody = z.object({
   code: z.string().min(1),
@@ -86,6 +92,16 @@ export async function promotionRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.status(201).send({ promotionId: promotion.promotionId, code: promotion.code })
   })
+
+  app.delete<{ Params: { promotionId: string } }>(
+    '/admin/promotions/:promotionId',
+    async (request, reply) => {
+      const principal = requireAdmin(request)
+      const removed = await deletePromotion(principal.tenantId, request.params.promotionId)
+      if (!removed) throw new ApiError(404, 'PROMOTION_NOT_FOUND', 'No such promotion')
+      return reply.status(204).send()
+    },
+  )
 
   app.patch<{ Params: { promotionId: string } }>(
     '/admin/promotions/:promotionId',

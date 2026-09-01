@@ -30,12 +30,21 @@ export async function insertUser(input: {
   return row
 }
 
-export async function findByUsername(username: string): Promise<UserRow | undefined> {
+/**
+ * Scoped to a tenant, necessarily.
+ *
+ * Usernames are unique per tenant, so a lookup by username alone can match a
+ * row in the wrong tenant — and whichever the database returned first would be
+ * the account that got logged into.
+ */
+export async function findByUsername(
+  tenantId: string,
+  username: string,
+): Promise<UserRow | undefined> {
   const [row] = await sql<UserRow[]>`
     select user_id, tenant_id, username, password_hash, currency, role
     from users
-    where username = ${username}
-    limit 1
+    where tenant_id = ${tenantId} and username = ${username}
   `
   return row
 }
@@ -50,10 +59,19 @@ export async function findById(userId: string): Promise<UserRow | undefined> {
   return row
 }
 
-export async function defaultTenantId(): Promise<string> {
+export async function tenantIdBySlug(slug: string): Promise<string | undefined> {
   const [row] = await sql<{ tenant_id: string }[]>`
-    select tenant_id from tenants where slug = 'demo' limit 1
+    select tenant_id from tenants where slug = ${slug}
   `
-  if (!row) throw new Error('The demo tenant is missing — run the seed')
-  return row.tenant_id
+  return row?.tenant_id
+}
+
+/** Delete an account and everything that hangs off it. */
+export async function deleteUser(tenantId: string, userId: string): Promise<boolean> {
+  const rows = await sql`
+    delete from users
+    where user_id = ${userId} and tenant_id = ${tenantId} and role = 'PLAYER'
+    returning user_id
+  `
+  return rows.length > 0
 }

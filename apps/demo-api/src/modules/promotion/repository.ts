@@ -105,6 +105,15 @@ export async function insertPromotion(input: {
   return toRule(row)
 }
 
+export async function deletePromotion(tenantId: string, promotionId: string): Promise<boolean> {
+  const rows = await sql`
+    delete from promotions
+    where promotion_id = ${promotionId} and tenant_id = ${tenantId}
+    returning promotion_id
+  `
+  return rows.length > 0
+}
+
 export async function setActive(
   tenantId: string,
   promotionId: string,

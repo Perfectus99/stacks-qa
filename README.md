@@ -6,10 +6,11 @@ API test automation for a multi-tenant payments platform — users, wallets,
 payments and promotions — **with the system under test included**, so the whole
 thing runs from a clean clone.
 
-**[Read the latest test report →](https://perfectus99.github.io/stacks-qa/)**
-Published from `main` on every green run. Journeys are written in named steps,
-so the report reads as the business chain rather than a list of HTTP calls —
-`playwright-report/summary.md` beside it is the plain-text version.
+**[See the latest run →](https://perfectus99.github.io/stacks-qa/)**
+A rendered summary — what the suite covers, and whether it is healthy — linking
+through to [the full report](https://perfectus99.github.io/stacks-qa/report/),
+where journeys read as the business chain rather than a list of HTTP calls.
+Published from `main` on every green run.
 
 ```bash
 git clone https://github.com/Perfectus99/stacks-qa && cd stacks-qa
@@ -112,8 +113,9 @@ happened in this test". A custom reporter
 ([`reporters/summary.ts`](suites/regression/reporters/summary.ts)) answers "what
 does the suite cover and is it healthy" — totals, coverage by area and intent,
 failures, flakes and the slowest tests, as Markdown. It prints to the console,
-writes `playwright-report/summary.md`, and appends to the GitHub Actions job
-summary so the run page itself carries it.
+writes it as a rendered page at the site root, and appends it to the GitHub
+Actions job summary so the run page carries it too. The published site is that
+page, with the full Playwright report beneath it at `/report`.
 
 **Actors are fixtures.** `admin` is worker-scoped, because admin state is
 read-mostly and one login per worker is enough. `player` is test-scoped and

@@ -156,9 +156,10 @@ Two reports, because there are two different questions.
 | Playwright HTML | "What happened in this test?" — every step, call and assertion, with a trace on failure | Whoever is debugging it |
 | `summary.md` (custom reporter) | "What does this suite cover, and is it healthy?" — totals, coverage by area and intent, failures, flakes, slowest tests | Anybody else |
 
-The summary goes to the console, to a file beside the HTML report, and to the
-GitHub Actions job summary, so a run page carries a readable answer without
-anyone downloading an artefact.
+The summary goes to the console, to the GitHub Actions job summary, and to the
+published site — where it *is* the landing page, with the full Playwright report
+beneath it at `/report`. Somebody handed the link gets a rendered answer, not a
+raw file.
 
 Journeys are written in named `test.step()` calls. The default report view is
 HTTP calls and source locations, which is the right level for a failure and the

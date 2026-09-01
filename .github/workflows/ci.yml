@@ -62,13 +62,20 @@ jobs:
           name: playwright-report
           path: suites/regression/playwright-report
           retention-days: 14
+      # The site root is a rendered summary; the full Playwright report is
+      # published beneath it. A link somebody opens should render.
+      - name: Assemble the site
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p suites/regression/site/report
+          cp -R suites/regression/playwright-report/. suites/regression/site/report/
       # Only from main: the published report should describe what is released,
       # not whatever a branch happened to be trying.
-      - name: Package the report for Pages
+      - name: Package the site for Pages
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: suites/regression/playwright-report
+          path: suites/regression/site
       - name: Logs on failure
         if: failure()
         run: docker compose logs --no-color

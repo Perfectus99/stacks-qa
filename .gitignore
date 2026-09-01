@@ -4,6 +4,7 @@ dist/
 
 test-results/
 playwright-report/
+site/
 blob-report/
 .playwright/
 

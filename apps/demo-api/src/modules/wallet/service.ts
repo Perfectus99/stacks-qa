@@ -4,6 +4,9 @@ import { ApiError } from '../../errors.js'
 import { toMajor, toMinor } from '../../money.js'
 import type { Principal } from '../../plugins/auth.js'
 import { accountOf } from '../user/directory.js'
+import { enqueue } from '../../jobs/queue.js'
+import { applySpend } from './progress.js'
+import { listHolds, lockActiveHolds, lockHold, updateHold, type HoldRow } from './holds.js'
 import {
   insertLedgerEntry,
   ledgerTotalMinor,
@@ -133,4 +136,129 @@ export async function adjust(input: {
     }
     throw error
   }
+}
+
+// ---- holds ------------------------------------------------------------------
+
+export interface Hold {
+  holdId: string
+  referenceId: string
+  type: string
+  amount: number
+  requirement: number
+  progress: number
+  status: string
+  expiresAt: string
+}
+
+function presentHold(row: HoldRow): Hold {
+  return {
+    holdId: row.hold_id,
+    referenceId: row.reference_id,
+    type: row.type,
+    amount: toMajor(row.amount_minor),
+    requirement: toMajor(row.requirement_minor),
+    progress: toMajor(row.progress_minor),
+    status: row.status,
+    expiresAt: row.expires_at.toISOString(),
+  }
+}
+
+export async function holds(principal: Principal, currency: string): Promise<Hold[]> {
+  const wallet = await walletFor(principal, currency)
+  return (await listHolds(wallet.wallet_id)).map(presentHold)
+}
+
+/**
+ * Spend from the account.
+ *
+ * The debit is immediate; the progress it earns towards any hold is not. The
+ * recalculation is queued, so a caller reading progress straight back may still
+ * see the figure from before this spend — see jobs/queue.ts for why that is
+ * deliberate.
+ */
+export async function spend(
+  principal: Principal,
+  currency: string,
+  input: { amount: number; reason: string },
+): Promise<Transaction> {
+  const amountMinor = toMinor(input.amount)
+  if (amountMinor <= 0) {
+    throw new ApiError(400, 'INVALID_REQUEST', 'A spend must be for a positive amount')
+  }
+
+  const wallet = await walletFor(principal, currency)
+
+  let row
+  try {
+    row = await sql.begin((tx) =>
+      insertLedgerEntry(tx, {
+        walletId: wallet.wallet_id,
+        referenceId: `spend_${randomUUID()}`,
+        type: 'SPEND',
+        amountMinor: -amountMinor,
+      }),
+    )
+  } catch (error) {
+    if ((error as { code?: string }).code === CHECK_VIOLATION) {
+      throw new ApiError(409, 'INSUFFICIENT_FUNDS', 'That spend would overdraw the account')
+    }
+    throw error
+  }
+
+  enqueue('hold-progress', () => applyProgress(wallet.wallet_id, amountMinor))
+
+  return {
+    transactionId: row.entry_id,
+    referenceId: row.reference_id,
+    type: row.type,
+    amount: toMajor(row.amount_minor),
+    createdAt: row.created_at.toISOString(),
+  }
+}
+
+/** The queued work: credit qualifying spend against every active hold. */
+export async function applyProgress(walletId: string, spendMinor: number): Promise<void> {
+  await sql.begin(async (tx) => {
+    const active = await lockActiveHolds(tx, walletId)
+    const now = new Date()
+
+    for (const row of active) {
+      const outcome = applySpend(
+        {
+          requirementMinor: Number(row.requirement_minor),
+          progressMinor: Number(row.progress_minor),
+          expiresAt: row.expires_at,
+          status: row.status,
+        },
+        spendMinor,
+        now,
+      )
+
+      await updateHold(tx, {
+        holdId: row.hold_id,
+        progressMinor: outcome.progressMinor,
+        status: outcome.kind === 'UNCHANGED' ? 'ACTIVE' : outcome.kind,
+      })
+    }
+  })
+}
+
+/** An administrator ending a hold early — the money stays, the claim on it goes. */
+export async function terminateHold(principal: Principal, holdId: string): Promise<Hold> {
+  return sql.begin(async (tx) => {
+    const row = await lockHold(tx, principal.tenantId, holdId)
+    if (!row) throw new ApiError(404, 'HOLD_NOT_FOUND', 'No such hold')
+    if (row.status !== 'ACTIVE') {
+      throw new ApiError(409, 'ALREADY_SETTLED', `This hold is already ${row.status.toLowerCase()}`)
+    }
+
+    await updateHold(tx, {
+      holdId: row.hold_id,
+      progressMinor: Number(row.progress_minor),
+      status: 'FORFEITED',
+    })
+
+    return presentHold({ ...row, status: 'FORFEITED' })
+  })
 }

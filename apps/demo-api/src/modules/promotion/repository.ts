@@ -17,10 +17,12 @@ interface PromotionRow {
   active: boolean
   starts_at: Date | null
   ends_at: Date | null
+  hold_days: number
 }
 
 export interface Promotion extends PromotionRule {
   name: string
+  holdDays: number
 }
 
 function toRule(row: PromotionRow): Promotion {
@@ -37,12 +39,14 @@ function toRule(row: PromotionRow): Promotion {
     active: row.active,
     startsAt: row.starts_at,
     endsAt: row.ends_at,
+    holdDays: row.hold_days,
   }
 }
 
 const columns = sql`
   promotion_id, code, name, promotion_type, bonus_percent, bonus_fixed_minor,
-  min_deposit_minor, max_bonus_minor, release_multiplier, active, starts_at, ends_at
+  min_deposit_minor, max_bonus_minor, release_multiplier, active, starts_at, ends_at,
+  hold_days
 `
 
 export async function listActive(tenantId: string): Promise<Promotion[]> {
@@ -86,14 +90,15 @@ export async function insertPromotion(input: {
   minDepositMinor: number
   maxBonusMinor: number | null
   releaseMultiplier: number
+  holdDays: number
 }): Promise<Promotion> {
   const [row] = await sql<PromotionRow[]>`
     insert into promotions (tenant_id, code, name, promotion_type, bonus_percent,
                             bonus_fixed_minor, min_deposit_minor, max_bonus_minor,
-                            release_multiplier)
+                            release_multiplier, hold_days)
     values (${input.tenantId}, ${input.code}, ${input.name}, ${input.promotionType},
             ${input.bonusPercent}, ${input.bonusFixedMinor}, ${input.minDepositMinor},
-            ${input.maxBonusMinor}, ${input.releaseMultiplier})
+            ${input.maxBonusMinor}, ${input.releaseMultiplier}, ${input.holdDays})
     returning ${columns}
   `
   if (!row) throw new Error('Promotion insert returned no row')

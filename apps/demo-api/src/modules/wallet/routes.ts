@@ -1,9 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { ApiError } from '../../errors.js'
+import { parse } from '../../validation.js'
 import { requireAdmin, requireSession, type Principal } from '../../plugins/auth.js'
 import { currencyOf } from '../user/directory.js'
-import { adjust, balance, reconciliation, transactions } from './service.js'
+import { adjust, balance, holds, reconciliation, spend, terminateHold, transactions } from './service.js'
+
+const spendBody = z.object({
+  amount: z.number().finite(),
+  reason: z.string().min(1).max(200),
+}).strict()
 
 const adjustmentBody = z.object({
   userId: z.string().uuid(),
@@ -40,6 +46,22 @@ export async function walletRoutes(app: FastifyInstance): Promise<void> {
   app.get('/reconciliation', async (request) => {
     const principal = requireSession(request)
     return reconciliation(principal, await currencyFor(principal))
+  })
+
+  app.get('/holds', async (request) => {
+    const principal = requireSession(request)
+    return holds(principal, await currencyFor(principal))
+  })
+
+  app.post('/spend', async (request, reply) => {
+    const principal = requireSession(request)
+    return reply
+      .status(201)
+      .send(await spend(principal, await currencyFor(principal), parse(spendBody, request.body)))
+  })
+
+  app.post<{ Params: { holdId: string } }>('/admin/holds/:holdId/terminate', async (request) => {
+    return terminateHold(requireAdmin(request), request.params.holdId)
   })
 
   app.post('/admin/adjustments', async (request, reply) => {

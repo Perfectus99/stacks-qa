@@ -46,9 +46,14 @@ export async function attachPromotion(
 export async function settlePromotion(
   tx: TransactionSql,
   input: { depositId: string; amountMinor: number },
-): Promise<{ grantedBonusMinor: number; releaseRequirementMinor: number; declined?: string }> {
+): Promise<{
+  grantedBonusMinor: number
+  releaseRequirementMinor: number
+  holdDays: number
+  declined?: string
+}> {
   const attachment = await findAttachment(tx, input.depositId)
-  if (!attachment) return { grantedBonusMinor: 0, releaseRequirementMinor: 0 }
+  if (!attachment) return { grantedBonusMinor: 0, releaseRequirementMinor: 0, holdDays: 0 }
 
   const promotion = await findById(tx, attachment.promotion_id)
   if (!promotion) {
@@ -59,7 +64,12 @@ export async function settlePromotion(
       releaseRequirementMinor: 0,
       declinedReason: 'The promotion no longer exists',
     })
-    return { grantedBonusMinor: 0, releaseRequirementMinor: 0, declined: 'Promotion removed' }
+    return {
+      grantedBonusMinor: 0,
+      releaseRequirementMinor: 0,
+      holdDays: 0,
+      declined: 'Promotion removed',
+    }
   }
 
   const verdict = evaluate(promotion, input.amountMinor, new Date())
@@ -72,7 +82,12 @@ export async function settlePromotion(
       releaseRequirementMinor: 0,
       declinedReason: verdict.reason,
     })
-    return { grantedBonusMinor: 0, releaseRequirementMinor: 0, declined: verdict.reason }
+    return {
+      grantedBonusMinor: 0,
+      releaseRequirementMinor: 0,
+      holdDays: 0,
+      declined: verdict.reason,
+    }
   }
 
   await settleAttachment(tx, {
@@ -85,5 +100,6 @@ export async function settlePromotion(
   return {
     grantedBonusMinor: verdict.bonusMinor,
     releaseRequirementMinor: verdict.releaseRequirementMinor,
+    holdDays: promotion.holdDays,
   }
 }

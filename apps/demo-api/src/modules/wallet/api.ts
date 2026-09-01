@@ -1,16 +1,18 @@
 import type { TransactionSql } from 'postgres'
+import { insertHold } from './holds.js'
 import { insertLedgerEntry, openWallet } from './repository.js'
 
 /**
- * The narrow, published way for another module to move money.
+ * The narrow, published surface other modules may use.
  *
- * It takes the caller's transaction rather than opening its own, so the ledger
- * entry commits with whatever the caller is doing — a deposit that is marked
- * approved but never credited is the failure this shape exists to prevent.
+ * Both functions take the caller's transaction rather than opening their own,
+ * so what they write commits with whatever the caller is doing — a deposit
+ * marked approved but never credited, or a bonus paid with no hold against it,
+ * are the failures this shape prevents.
  *
- * Callers get this function and nothing else. The repository stays private to
- * the wallet module.
+ * Callers get these two functions. The repository stays private to the module.
  */
+
 export async function creditAccount(
   tx: TransactionSql,
   input: {
@@ -33,5 +35,34 @@ export async function creditAccount(
     referenceId: input.referenceId,
     type: input.type,
     amountMinor: input.amountMinor,
+  })
+}
+
+/** Place a hold over bonus money that is in the account but not yet earned. */
+export async function placeHold(
+  tx: TransactionSql,
+  input: {
+    userId: string
+    tenantId: string
+    currency: string
+    referenceId: string
+    amountMinor: number
+    requirementMinor: number
+    expiresAt: Date
+  },
+): Promise<void> {
+  const wallet = await openWallet(tx, {
+    userId: input.userId,
+    tenantId: input.tenantId,
+    currency: input.currency,
+  })
+
+  await insertHold(tx, {
+    walletId: wallet.wallet_id,
+    tenantId: input.tenantId,
+    referenceId: input.referenceId,
+    amountMinor: input.amountMinor,
+    requirementMinor: input.requirementMinor,
+    expiresAt: input.expiresAt,
   })
 }

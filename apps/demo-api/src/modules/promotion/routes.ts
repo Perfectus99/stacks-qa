@@ -22,6 +22,7 @@ const createBody = z.object({
   minDeposit: z.number().finite().nonnegative().default(0),
   maxBonus: z.number().finite().positive().nullable().default(null),
   releaseMultiplier: z.number().int().min(0).max(100).default(1),
+  holdDays: z.number().int().min(0).max(365).default(30),
 }).strict()
 
 const activeBody = z.object({ active: z.boolean() }).strict()
@@ -80,6 +81,7 @@ export async function promotionRoutes(app: FastifyInstance): Promise<void> {
       minDepositMinor: toMinor(input.minDeposit),
       maxBonusMinor: input.maxBonus === null ? null : toMinor(input.maxBonus),
       releaseMultiplier: input.releaseMultiplier,
+      holdDays: input.holdDays,
     })
 
     return reply.status(201).send({ promotionId: promotion.promotionId, code: promotion.code })

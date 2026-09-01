@@ -3,7 +3,7 @@ import { ApiError } from '../../errors.js'
 import { toMajor, toMinor } from '../../money.js'
 import type { Principal } from '../../plugins/auth.js'
 import { accountOf } from '../user/directory.js'
-import { creditAccount } from '../wallet/credit.js'
+import { creditAccount, placeHold } from '../wallet/api.js'
 import { attachPromotion, settlePromotion } from '../promotion/attachment.js'
 import {
   findDeposit,
@@ -179,6 +179,19 @@ export async function decide(
         referenceId: row.deposit_id,
         type: 'BONUS',
         amountMinor: bonus.grantedBonusMinor,
+      })
+
+      // The bonus is in the account but not yet the account holder's. The hold
+      // is written in this transaction so bonus money can never exist without
+      // the claim against it.
+      await placeHold(tx, {
+        userId: account.userId,
+        tenantId: account.tenantId,
+        currency: account.currency,
+        referenceId: row.deposit_id,
+        amountMinor: bonus.grantedBonusMinor,
+        requirementMinor: bonus.releaseRequirementMinor,
+        expiresAt: new Date(Date.now() + bonus.holdDays * 24 * 60 * 60 * 1000),
       })
     }
   })

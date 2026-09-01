@@ -27,6 +27,8 @@ export interface NewPromotion {
   minDeposit?: number
   maxBonus?: number | null
   releaseMultiplier?: number
+  /** Days before the hold over the bonus expires. 0 opens it already expired. */
+  holdDays?: number
 }
 
 export class PromotionService {

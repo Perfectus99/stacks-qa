@@ -4,9 +4,9 @@ API test automation for a multi-tenant payments platform — wallet, payments,
 promotions and users — with the system under test included, so the whole thing
 runs from a clean clone.
 
-> **Status: both deposit journeys work end to end**, with and without a
-> promotion attached. 41 API tests and 9 unit tests, all passing, nothing
-> pending. See [Build order](#build-order).
+> **Status: the full promotional lifecycle works** — deposit, approval, bonus,
+> hold, and release through qualifying spend. 50 API tests and 17 unit tests,
+> all passing, nothing pending. See [Build order](#build-order).
 
 ## Why the tests come first
 
@@ -39,8 +39,8 @@ repository has not kept.
 ```bash
 docker compose up -d --wait     # the system under test, on :3100
 npm install
-npm run test:api                # 41 API tests
-npm run test:unit               # 9 unit tests — no database, no server
+npm run test:api                # 50 API tests
+npm run test:unit               # 17 unit tests — no database, no server
 npm run verify                  # typecheck + lint + unit: the static gate CI runs
 ```
 
@@ -99,6 +99,16 @@ withdrawn in between. One pure function does both, so the two moments cannot
 drift apart, and being pure it carries unit tests for the boundaries that are
 awkward to reach through the API.
 
+**Release progress is deliberately eventual.** Spending is credited to the
+ledger immediately; the progress it earns towards a hold is applied by a
+background job a moment later. That is how the systems this models behave, and
+making it true here forces the suite to be written for it — every read of
+progress uses `expect.poll`, never a single read straight back.
+
+The delay is configurable and never zero. A queue that ran inline in CI would
+let the suite quietly assume immediacy and pass, which is the same thing as not
+testing it.
+
 **Request bodies are `.strict()`.** An unknown field is a `400`, not a shrug.
 Zod strips unknown keys by default, which turned a promotion code the client
 was sending into a silent no-op.
@@ -129,6 +139,6 @@ whichever order is unlucky.
 | 4 | `wallet` service — balances, ledger, reconciliation | ✅ done |
 | 5 | `payment` service — the deposit approval journey turns green | ✅ done |
 | 6 | `promotion` service — deposits with a bonus attached | ✅ done |
-| 7 | Holds — release requirement, progress, expiry | next |
-| 8 | Browser layer over a minimal UI | |
+| 7 | Holds — release requirement, progress, expiry | ✅ done |
+| 8 | Browser layer over a minimal UI | next |
 | 9 | Load thresholds and an authorisation matrix | |

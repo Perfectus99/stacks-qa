@@ -26,6 +26,7 @@ export async function makePromotion(
     bonusPercent: 50,
     minDeposit: 10,
     releaseMultiplier: 1,
+    holdDays: 30,
     ...overrides,
   })
 

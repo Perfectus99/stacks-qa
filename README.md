@@ -13,11 +13,11 @@ Published from `main` on every green run: every test, its steps, and its timing.
 git clone https://github.com/Perfectus99/stacks-qa && cd stacks-qa
 npm install
 docker compose up -d --wait     # the system under test, on :3100
-npm run test:api                # 50 API tests
+npm run test:api                # 58 API tests
 ```
 
 > **Status:** the full promotional lifecycle works — deposit, approval, bonus,
-> hold, and release through qualifying spend. 50 API tests and 17 unit tests,
+> hold, and release through qualifying spend. 58 API tests and 17 unit tests,
 > all passing, nothing pending.
 
 ---
@@ -41,7 +41,7 @@ testing:
 
 | | |
 |---|---|
-| **Multi-tenant** | every query is tenant-scoped; usernames are unique per tenant, not globally |
+| **Multi-tenant** | two tenants are seeded, so isolation tests are capable of failing; usernames are unique per tenant, not globally |
 | **A ledger** | the balance is maintained by a database trigger on ledger inserts, and `GET /wallet/reconciliation` compares the two |
 | **A decision with side effects in three modules** | approving a deposit transitions it, credits the wallet, grants a bonus and opens a hold — in one transaction |
 | **Eventual consistency** | hold progress is applied by a background job, not inline |
@@ -50,7 +50,7 @@ testing:
 ## Running it
 
 ```bash
-npm run test:api      # 50 API tests against the running stack
+npm run test:api      # 58 API tests against the running stack
 npm run test:unit     # 17 unit tests — no database, no server
 npm run test:ci       # what CI runs: everything except @pending
 npm run verify        # typecheck + lint + unit, the static gate
@@ -67,7 +67,7 @@ apps/demo-api/          the system under test — one process, one module per se
 packages/core/          the typed client, and the response contracts it enforces
 packages/test-data/     factories; uniqueness and cleanup live here, never in a spec
 suites/regression/      the API suite: folder = owning service, tags = why it exists
-docs/                   lessons.md, and a bug report worth reading
+docs/                   TESTING-STRATEGY.md · lessons.md · a bug report worth reading
 ```
 
 Folders appear when their first test lands. An empty skeleton is a promise the
@@ -126,7 +126,9 @@ way — [`docs/bugs/001`](docs/bugs/001-double-credit-on-concurrent-approval.md)
 per-process counter is not.
 
 Everything above is a rule because something went wrong first.
-[`docs/lessons.md`](docs/lessons.md) is the record.
+[`docs/lessons.md`](docs/lessons.md) is the record, and
+[`docs/TESTING-STRATEGY.md`](docs/TESTING-STRATEGY.md) is the reasoning: the risk
+model, what each layer is for, and what is deliberately **not** tested.
 
 ## How the system under test is built
 
@@ -167,5 +169,6 @@ progress polls.
 | 6 | `promotion` — deposits with a bonus attached | ✅ |
 | 7 | Holds — release requirement, progress, expiry | ✅ |
 | 8 | Response contracts, published report | ✅ |
-| 9 | Browser layer over a minimal UI | next |
-| 10 | Load thresholds and an authorisation matrix | |
+| 9 | Tenant isolation, real teardown, testing strategy | ✅ |
+| 10 | Browser layer over a minimal UI | next |
+| 11 | Load thresholds and an authorisation matrix | |

@@ -16,7 +16,7 @@ reach. For a payments platform the ranking is not close:
 | 3 | **A decision is applied twice, or half-applied** | Approval touches three modules; a partial write leaves state nobody can reason about | row locking, single-transaction credit + hold, state-machine refusals |
 | 4 | **A bonus is paid to someone not entitled to it** | Direct loss, and usually discovered in aggregate long after | eligibility decided again at approval, withdrawn-promotion journey |
 | 5 | **Someone acts outside their role** | Contained by the above if scoping holds, but the first step in most abuse | every authorisation rule tested as a pair |
-| 6 | **A contract changes silently** | Cheap alone, expensive as the cause of a later mystery | response contracts on every call |
+| 6 | **A contract changes silently** | Cheap alone, expensive as the cause of a later mystery | contracts on every response, success and error alike |
 
 Everything below that line — display formatting, pagination shape, ordering —
 is not currently tested. That is a decision, not an oversight.
@@ -30,8 +30,19 @@ Each layer catches something the others structurally cannot.
 | **Unit** | 17 | Does the rule handle its boundaries? Inclusive minimums, exclusive deadlines, rounding | Milliseconds, no database, no clock |
 | **Status** | every call | Did the call succeed? | Free — lives in the client, throws on an unexpected code |
 | **Contract** | every response | Is the shape still what we agreed? | Free — Zod parse per response |
-| **API** | 58 | Does the system do the right thing? | Seconds, needs the stack |
-| **Journey** | 6 of the 58 | Do the parts work together across services? | Slowest, and the ones that matter most |
+| **API** | 108 | Does the system do the right thing? | Seconds, needs the stack |
+| **Journey** | 6 of the 108 | Do the parts work together across services? | Slowest, and the ones that matter most |
+
+Fifty of those API tests are the **authorisation matrix** — every endpoint
+against every kind of caller. The scattered `@security` tests each prove one rule
+inside a scenario; the matrix proves the whole surface at once, which is a
+different claim: that no route was added without an access decision being made
+about it. A new endpoint with no row in the matrix is what it exists to catch.
+
+It asserts the *outcome class* — unauthenticated, forbidden, permitted — not an
+exact status. Whether a permitted call then answers 200, 404 or 409 depends on
+the body it was given, and pinning that here would make the matrix a second copy
+of the functional tests that breaks whenever they do.
 
 **Why the pure rules get unit tests and nothing else does.** Eligibility and hold
 progress are decisions with awkward boundaries — a deadline that is exclusive, a
@@ -131,6 +142,7 @@ Applied so far to:
 | Response contracts | A response field renamed — `available: Required` |
 | Tenant isolation (read) | Scoping removed from the deposit lookup |
 | Tenant isolation (approve) | Scoping removed from the locking read |
+| Authorisation matrix | Role check dropped from one admin endpoint |
 
 Two of those first passed against the broken build and had to be rewritten. The
 record is in [`lessons.md`](lessons.md).

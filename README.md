@@ -13,11 +13,11 @@ Published from `main` on every green run: every test, its steps, and its timing.
 git clone https://github.com/Perfectus99/stacks-qa && cd stacks-qa
 npm install
 docker compose up -d --wait     # the system under test, on :3100
-npm run test:api                # 58 API tests
+npm run test:api                # 108 API tests
 ```
 
 > **Status:** the full promotional lifecycle works — deposit, approval, bonus,
-> hold, and release through qualifying spend. 58 API tests and 17 unit tests,
+> hold, and release through qualifying spend. 108 API tests and 17 unit tests,
 > all passing, nothing pending.
 
 ---
@@ -50,7 +50,7 @@ testing:
 ## Running it
 
 ```bash
-npm run test:api      # 58 API tests against the running stack
+npm run test:api      # 108 API tests against the running stack
 npm run test:unit     # 17 unit tests — no database, no server
 npm run test:ci       # what CI runs: everything except @pending
 npm run verify        # typecheck + lint + unit, the static gate
@@ -85,14 +85,15 @@ tests/payment/admin/deposit-approve.spec.ts     ← who owns this
 test('… @negative @security @p0 @payment')      ← why it exists
 ```
 
-Cross-service chains live in `tests/journeys/` — no single service owns them.
+Cross-service chains live in `tests/journeys/`, and tenant isolation and the
+authorisation matrix in `tests/security/` — no single service owns them.
 
 **Assertions are layered, and each layer catches what the others cannot:**
 
 | Layer | Catches | Where |
 |---|---|---|
 | Status | the call failed | the client, which throws on an unexpected code |
-| **Contract** | a field renamed, dropped or retyped | `packages/core/src/contracts.ts`, checked on every response |
+| **Contract** | a field renamed, dropped or retyped | `packages/core/src/contracts.ts`, checked on every response — errors included |
 | Business | the *system* is wrong | the spec — "the balance moved by exactly the amount deposited" |
 
 The contract layer is the one most suites skip. Status assertions sail straight
